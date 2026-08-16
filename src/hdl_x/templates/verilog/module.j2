@@ -1,0 +1,16 @@
+module {{ module.name }}{% if module.parameters %} #(
+{% for parameter in module.parameters %}{% for comment in parameter.leading_comments %}    {{ comment }}
+{% endfor %}    {{ parameter.declaration }}{% if not loop.last %},{% endif %}
+{% for comment in parameter.trailing_comments %}    {{ comment }}
+{% endfor %}{% endfor %}){% endif %} (
+{% for port in module.ports %}{% for comment in port.leading_comments %}    {{ comment }}
+{% endfor %}    {{ port.declaration }}{% if not loop.last %},{% endif %}
+{% for comment in port.trailing_comments %}    {{ comment }}
+{% endfor %}{% endfor %});
+{% if module.declarations %}
+{% for declaration in module.declarations %}{{ declaration }}
+{% endfor %}{% endif %}{% if module.body_items %}
+{% for item in module.body_items %}{{ item }}
+{% if not loop.last %}
+{% endif %}{% endfor %}{% endif %}
+endmodule

@@ -1,0 +1,26 @@
+{% if item.kind == "continuous_assignment" %}{{ item.indent }}assign {{ item.target }} = {{ item.value }};
+{% elif item.kind == "process" %}{{ item.indent }}{{ item.header }} begin{% if item.label %} : {{ item.label }}{% endif %}
+{{ item.body }}
+{{ item.indent }}end
+{% elif item.kind == "instance" %}{{ item.indent }}{{ item.unit }}{% if item.parameters %} #(
+{% for binding in item.parameters %}{% for comment in binding.leading_comments %}{{ binding.indent }}{{ comment }}
+{% endfor %}{{ binding.indent }}{% if binding.formal is not none %}.{{ binding.formal }}({{ binding.value }}){% else %}{{ binding.value }}{% endif %}{% if not loop.last %},{% endif %}
+{% for comment in binding.trailing_comments %}{{ binding.indent }}{{ comment }}
+{% endfor %}{% endfor %}{{ item.continuation_indent }}){% endif %} {{ item.name }} (
+{% for binding in item.ports %}{% for comment in binding.leading_comments %}{{ binding.indent }}{{ comment }}
+{% endfor %}{{ binding.indent }}{% if binding.formal is not none %}.{{ binding.formal }}({{ binding.value }}){% else %}{{ binding.value }}{% endif %}{% if not loop.last %},{% endif %}
+{% for comment in binding.trailing_comments %}{{ binding.indent }}{{ comment }}
+{% endfor %}{% endfor %}{{ item.continuation_indent }});
+{% elif item.kind == "for_generate" %}{{ item.indent }}for ({{ item.index }} = {{ item.start }}; {{ item.condition }}; {{ item.step }}) begin : {{ item.label }}
+{{ item.body }}
+{{ item.indent }}end
+{% elif item.kind == "if_generate" %}{{ item.indent }}if ({{ item.condition }}) begin : {{ item.label }}
+{{ item.then_body }}
+{{ item.indent }}end{% if item.else_body %} else begin : {{ item.label }}
+{{ item.else_body }}
+{{ item.indent }}end{% endif %}
+{% elif item.kind == "generate_region" %}{% for genvar in item.genvars %}{{ item.indent }}genvar {{ genvar }};
+{% endfor %}{{ item.indent }}generate
+{{ item.body }}
+{{ item.indent }}endgenerate
+{% endif %}

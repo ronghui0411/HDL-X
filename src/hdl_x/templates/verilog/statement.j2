@@ -1,0 +1,22 @@
+{% if statement.kind == "assignment" %}{{ statement.indent }}{{ statement.target }} {{ statement.operator }} {{ statement.value }};
+{% elif statement.kind == "if" %}{{ statement.indent }}if ({{ statement.condition }}) begin
+{{ statement.then_body }}
+{{ statement.indent }}end{% if statement.else_body %} else begin
+{{ statement.else_body }}
+{{ statement.indent }}end{% endif %}
+{% elif statement.kind == "case" %}{{ statement.indent }}case ({{ statement.expression }})
+{% for alternative in statement.alternatives %}{{ alternative.indent }}{{ alternative.selectors | join(", ") }}: begin
+{{ alternative.body }}
+{{ alternative.indent }}end
+{% endfor %}{% if statement.default_body %}{{ statement.child_indent }}default: begin
+{{ statement.default_body }}
+{{ statement.child_indent }}end
+{% endif %}{{ statement.indent }}endcase
+{% elif statement.kind == "for" %}{{ statement.indent }}for ({{ statement.index }} = {{ statement.start }}; {{ statement.condition }}; {{ statement.step }}) begin
+{{ statement.body }}
+{{ statement.indent }}end
+{% elif statement.kind == "block" %}{{ statement.indent }}begin{% if statement.label %} : {{ statement.label }}{% endif %}
+{{ statement.body }}
+{{ statement.indent }}end
+{% elif statement.kind == "null" %}{{ statement.indent }};
+{% endif %}
