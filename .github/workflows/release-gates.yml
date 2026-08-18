@@ -84,5 +84,13 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Install and verify libgnat-13
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes libgnat-13
+          dpkg-query --show --showformat='${Package} ${Version}\n' libgnat-13
+          ldconfig -p | grep --fixed-strings 'libgnat-13.so'
+
       - name: Build wheelhouse and run isolated smoke
         run: python scripts/release_wheel_smoke.py --workspace "${{ runner.temp }}/hdl-x-wheel-smoke"
