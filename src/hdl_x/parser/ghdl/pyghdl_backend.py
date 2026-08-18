@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from contextlib import redirect_stdout
 from importlib import import_module
-from importlib.metadata import PackageNotFoundError, version
 from io import StringIO
 from pathlib import Path
 from threading import RLock
@@ -59,8 +59,8 @@ from .raw import (
     RawUnaryExpression,
     RawUnaryOperator,
 )
+from .runtime import require_pyghdl_runtime
 
-_SUPPORTED_PYGHDL_VERSION = "6.0.0"
 _GENERATE_DOM_TYPE_ERROR = (
     "ModelEntity.__init__() takes from 1 to 2 positional arguments but 4 were given"
 )
@@ -70,22 +70,7 @@ _LIBGHDL_LOCK = RLock()
 def _load_api() -> SimpleNamespace:
     """延迟装入经实际验证的 pyGHDL 6 API。"""
 
-    try:
-        installed_version = version("pyGHDL")
-    except PackageNotFoundError as ex:
-        raise FrontendError(
-            "未安装 pyGHDL；VHDL frontend 需要 pyGHDL 6.0.0。",
-            code="HDLX-GHDL-UNAVAILABLE",
-            suggestion="安装与当前 Python ABI 匹配的 pyGHDL 6.0.0 wheel。",
-        ) from ex
-
-    if installed_version != _SUPPORTED_PYGHDL_VERSION:
-        raise FrontendError(
-            f"不支持 pyGHDL {installed_version}；当前 backend 已验证版本为 "
-            f"{_SUPPORTED_PYGHDL_VERSION}。",
-            code="HDLX-GHDL-VERSION",
-            suggestion="安装 pyGHDL 6.0.0，或为新版本增加并验证独立 backend。",
-        )
+    require_pyghdl_runtime()
 
     try:
         dom = import_module("pyGHDL.dom")
@@ -160,6 +145,7 @@ class PyGhdlBackend(GhdlFrontendBackend):
         with _LIBGHDL_LOCK:
             gather_comments = api.flags.Flag_Gather_Comments.value
             parse_parenthesis = api.vhdl_parse.Flag_Parse_Parenthesis.value
+            self._active_source_lines = tuple(source_code.splitlines())
             try:
                 # pyGHDL DOM 的 Design.Analyze 只处理 pyVHDLModel 依赖关系，
                 # 不能替代 libghdl 的名称、类型和静态性检查。所有输入先在
@@ -197,18 +183,22 @@ class PyGhdlBackend(GhdlFrontendBackend):
                 raise
             except (api.DOMException, api.LibGHDLException, OSError) as ex:
                 details = self._format_ghdl_error(ex)
+                line, column = self._error_location(details)
                 raise FrontendError(
                     f"GHDL 无法分析 VHDL 源文件：{details}",
                     code="HDLX-GHDL-ANALYZE",
                     file=str(path),
+                    line=line,
+                    column=column,
                     suggestion="修正 GHDL 报告的语法或语义错误后重试。",
                 ) from ex
             finally:
                 api.flags.Flag_Gather_Comments.value = gather_comments
                 api.vhdl_parse.Flag_Parse_Parenthesis.value = parse_parenthesis
+                self._active_source_lines = ()
 
-    @staticmethod
     def _create_document(
+        self,
         api: SimpleNamespace,
         path: Path,
         source_code: str,
@@ -1768,29 +1758,157 @@ class PyGhdlBackend(GhdlFrontendBackend):
             return None
         return str(api.name_table.Get_Name_Ptr(label))
 
-    @staticmethod
-    def _source_from_dom(node: Any) -> RawSourceLocation | None:
+    def _source_from_dom(self, node: Any) -> RawSourceLocation | None:
         try:
             position = node.Position
             return RawSourceLocation(
                 file=Path(position.Filename),
                 line=int(position.Line),
-                column=int(position.Column),
+                column=int(position.Column) + 1,
             )
         except (AttributeError, TypeError, ValueError):
             return None
 
-    @staticmethod
-    def _source_from_iir(api: SimpleNamespace, node: Any) -> RawSourceLocation | None:
+    def _source_from_iir(
+        self,
+        api: SimpleNamespace,
+        node: Any,
+    ) -> RawSourceLocation | None:
         try:
             position = api.Position.parse(node)
+            start_line = int(position.Line)
+            start_column = int(position.Column) + 1
+            end = self._end_from_iir(api, node, start_line, start_column)
             return RawSourceLocation(
                 file=Path(position.Filename),
-                line=int(position.Line),
-                column=int(position.Column),
+                line=start_line,
+                column=start_column,
+                end_line=end[0] if end is not None else None,
+                end_column=end[1] if end is not None else None,
             )
         except (AttributeError, TypeError, ValueError, OSError):
             return None
+
+    def _end_from_iir(
+        self,
+        api: SimpleNamespace,
+        node: Any,
+        start_line: int,
+        start_column: int,
+    ) -> tuple[int, int] | None:
+        """只对已验证 getter 或简单分号节点提取半开结束位置。"""
+
+        kind = api.nodes.Get_Kind(node)
+        structural_kinds = {
+            api.nodes.Iir_Kind.Architecture_Body: "architecture",
+            api.nodes.Iir_Kind.Entity_Declaration: "entity",
+            api.nodes.Iir_Kind.Component_Declaration: "component",
+            api.nodes.Iir_Kind.Process_Statement: "process",
+            api.nodes.Iir_Kind.Sensitized_Process_Statement: "process",
+            api.nodes.Iir_Kind.If_Generate_Statement: "generate",
+            api.nodes.Iir_Kind.For_Generate_Statement: "generate",
+            api.nodes.Iir_Kind.Block_Statement: "block",
+        }
+        semicolon_kinds = {
+            api.nodes.Iir_Kind.Signal_Declaration,
+            api.nodes.Iir_Kind.Component_Instantiation_Statement,
+            api.nodes.Iir_Kind.Simple_Signal_Assignment_Statement,
+            api.nodes.Iir_Kind.Concurrent_Simple_Signal_Assignment,
+            api.nodes.Iir_Kind.Concurrent_Conditional_Signal_Assignment,
+            api.nodes.Iir_Kind.Null_Statement,
+        }
+
+        if kind in structural_kinds:
+            return self._scan_to_end_clause(
+                start_line,
+                start_column,
+                structural_kinds[kind],
+            )
+        if kind in semicolon_kinds:
+            return self._scan_to_semicolon(start_line, start_column)
+        return None
+
+    def _scan_to_semicolon(self, line: int, column: int) -> tuple[int, int] | None:
+        """从 GHDL 锚点扫描最近语句分号，不解析 VHDL grammar。"""
+
+        lines = getattr(self, "_active_source_lines", ())
+        in_string = False
+        for line_index in range(line - 1, len(lines)):
+            text = lines[line_index]
+            index = column - 1 if line_index == line - 1 else 0
+            while index < len(text):
+                character = text[index]
+                if character == '"':
+                    if in_string and index + 1 < len(text) and text[index + 1] == '"':
+                        index += 2
+                        continue
+                    in_string = not in_string
+                elif not in_string and character == "-" and text[index : index + 2] == "--":
+                    break
+                elif not in_string and character == ";":
+                    return line_index + 1, index + 2
+                index += 1
+        return None
+
+    def _scan_to_end_clause(
+        self,
+        line: int,
+        column: int,
+        keyword: str,
+    ) -> tuple[int, int] | None:
+        """扫描已由 IIR 分类节点的结束子句，并处理嵌套 generate。"""
+
+        identifier = r"[A-Za-z][A-Za-z0-9_]*"
+        end_pattern = re.compile(
+            rf"\bend\s+(?:postponed\s+)?{keyword}(?:\s+{identifier})?\s*;",
+            re.IGNORECASE,
+        )
+        open_pattern = re.compile(rf"\b{keyword}\b", re.IGNORECASE)
+        lines = getattr(self, "_active_source_lines", ())
+        depth = 0
+        for line_index in range(line - 1, len(lines)):
+            text = self._mask_non_code(lines[line_index])
+            start = column - 1 if line_index == line - 1 else 0
+            if keyword != "generate":
+                match = end_pattern.search(text, start)
+                if match is not None:
+                    return line_index + 1, match.end() + 1
+                continue
+
+            token_pattern = re.compile(
+                rf"{end_pattern.pattern}|{open_pattern.pattern}",
+                re.IGNORECASE,
+            )
+            for match in token_pattern.finditer(text, start):
+                if end_pattern.fullmatch(match.group(0)):
+                    depth -= 1
+                    if depth <= 0:
+                        return line_index + 1, match.end() + 1
+                else:
+                    depth += 1
+        return None
+
+    @staticmethod
+    def _mask_non_code(text: str) -> str:
+        """保留列宽并屏蔽字符串与行注释，供窄 span 扫描使用。"""
+
+        characters = list(text)
+        in_string = False
+        index = 0
+        while index < len(characters):
+            if characters[index] == '"':
+                characters[index] = " "
+                if in_string and index + 1 < len(characters) and characters[index + 1] == '"':
+                    characters[index + 1] = " "
+                    index += 2
+                    continue
+                in_string = not in_string
+            elif in_string:
+                characters[index] = " "
+            elif characters[index] == "-" and text[index : index + 2] == "--":
+                return "".join(characters[:index]) + " " * (len(characters) - index)
+            index += 1
+        return "".join(characters)
 
     def _raise_unsupported(
         self,
@@ -1832,6 +1950,15 @@ class PyGhdlBackend(GhdlFrontendBackend):
                         messages.append(item_text)
             current = current.__cause__
         return "; ".join(messages) or type(error).__name__
+
+    @staticmethod
+    def _error_location(details: str) -> tuple[int | None, int | None]:
+        """将 libghdl 的 0-based 行内 offset 转成 canonical 1-based 列号。"""
+
+        match = re.search(r"(?<!\d):(\d+):(\d+):", details)
+        if match is None:
+            return None, None
+        return int(match.group(1)), int(match.group(2)) + 1
 
     @staticmethod
     def _enum_name(enum_type: Any, value: Any) -> str:

@@ -10,11 +10,13 @@ from typing import TypeAlias
 
 @dataclass(frozen=True, slots=True)
 class RawSourceLocation:
-    """frontend 私有节点的起始源码位置。"""
+    """frontend 私有节点的 1-based 起始位置及可选结束位置。"""
 
     file: Path
     line: int
     column: int
+    end_line: int | None = None
+    end_column: int | None = None
 
 
 class RawRangeDirection(str, Enum):

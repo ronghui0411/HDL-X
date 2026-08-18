@@ -5,8 +5,6 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("pyGHDL", reason="真实 GHDL integration 需要 pyGHDL wheel")
-
 from hdl_x.diagnostics import FrontendError, UnsupportedConstructError
 from hdl_x.frontend import VhdlFrontend
 from hdl_x.generator import VerilogGenerator
@@ -30,6 +28,8 @@ from hdl_x.parser.ghdl import (
     RawCombinationalProcess,
     RawDesign,
 )
+
+pytestmark = pytest.mark.ghdl_integration
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 

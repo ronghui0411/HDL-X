@@ -4,22 +4,31 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hdl-x"
-version = "0.1.0"
+version = "0.1.1"
 description = "Offline, semantics-preserving HDL source translator"
 readme = "README.md"
+authors = [{ name = "rh" }]
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES"]
 requires-python = ">=3.10"
 dependencies = [
     "jinja2>=3.1,<4",
     "pydantic>=2.7,<3",
+    "pyGHDL==6.0.0",
     "typer>=0.12,<1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ronghui0411/HDL-X"
+Repository = "https://github.com/ronghui0411/HDL-X"
+Issues = "https://github.com/ronghui0411/HDL-X/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "ruff>=0.12,<1"]
 exe = ["pyinstaller>=6.22,<7"]
 
-# pyGHDL 的官方 platform-specific wheels 目前由 GHDL release assets 分发，
-# 而不是 PyPI；README 给出经验证的 6.0.0 Windows ABI-specific 安装示例。
+# pyGHDL 的官方 platform-specific wheels 目前由 GHDL release assets 分发；
+# 核心依赖仍精确声明版本，README 给出先安装匹配 wheel 的步骤。
 
 [project.scripts]
 hdl-x = "hdl_x.cli.main:app"
@@ -34,9 +43,13 @@ where = ["src"]
 hdl_x = ["templates/**/*.j2"]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra --strict-markers"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "ghdl_integration: requires the exact supported pyGHDL/libghdl runtime and executes the real VHDL frontend",
+    "semantic_equivalence: runs VHDL and generated Verilog in independent external simulators and compares traces",
+]
 
 [tool.ruff]
 target-version = "py310"

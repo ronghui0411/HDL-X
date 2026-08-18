@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import importlib.metadata
 import platform
 import sys
 from dataclasses import dataclass
 
+from hdl_x.parser.ghdl.runtime import inspect_pyghdl_runtime
 from hdl_x.validator import GhdlValidator, SlangValidator, YosysValidator
 
 
@@ -19,13 +19,6 @@ class EnvironmentItem:
     version: str | None
     detail: str
     required: bool = False
-
-
-def _distribution_version(distribution: str) -> str | None:
-    try:
-        return importlib.metadata.version(distribution)
-    except importlib.metadata.PackageNotFoundError:
-        return None
 
 
 def inspect_environment() -> list[EnvironmentItem]:
@@ -41,42 +34,16 @@ def inspect_environment() -> list[EnvironmentItem]:
         )
     ]
 
-    pyghdl_version = _distribution_version("pyGHDL")
-    libghdl_detail = "官方 pyGHDL/libghdl backend"
-    if pyghdl_version is not None:
-        try:
-            from pyGHDL.dom.NonStandard import Design  # noqa: F401
-            from pyGHDL.libghdl import libghdl  # noqa: F401
-        except (ImportError, OSError) as error:
-            items.append(
-                EnvironmentItem(
-                    name="GHDL frontend (pyGHDL/libghdl)",
-                    available=False,
-                    version=pyghdl_version,
-                    detail=f"包已安装但 backend 加载失败: {error}",
-                    required=True,
-                )
-            )
-        else:
-            items.append(
-                EnvironmentItem(
-                    name="GHDL frontend (pyGHDL/libghdl)",
-                    available=True,
-                    version=pyghdl_version,
-                    detail=libghdl_detail,
-                    required=True,
-                )
-            )
-    else:
-        items.append(
-            EnvironmentItem(
-                name="GHDL frontend (pyGHDL/libghdl)",
-                available=False,
-                version=None,
-                detail="未安装匹配版本的官方 pyGHDL wheel",
-                required=True,
-            )
+    pyghdl = inspect_pyghdl_runtime()
+    items.append(
+        EnvironmentItem(
+            name="GHDL frontend (pyGHDL/libghdl)",
+            available=pyghdl.available,
+            version=pyghdl.installed_version,
+            detail=pyghdl.detail,
+            required=True,
         )
+    )
 
     for validator in (GhdlValidator(), SlangValidator(), YosysValidator()):
         availability = validator.availability()

@@ -1,0 +1,93 @@
+HDL-X v0.1.1 Third-Party Notices
+================================
+
+Copyright (c) 2026 rh. HDL-X is licensed under the MIT License; see LICENSE.
+
+This file is a technical inventory, not legal advice. The HDL-X source archive
+and pure Python wheel do not bundle pyGHDL, libghdl, or the other runtime
+dependency wheels listed below. The HDL-X wheel declares dependencies through
+Python package metadata. Each separately installed dependency remains subject
+to its own license, and its wheel contains the corresponding license text.
+
+The v0.1.1 release does not include the previously built PyInstaller EXE or its
+embedded Python/pyGHDL/libghdl runtime. EXE distribution is deferred for a
+separate binary-distribution review.
+
+Primary runtime dependency
+--------------------------
+
+pyGHDL 6.0.0 / libghdl
+  SPDX: GPL-2.0-or-later
+  Project and corresponding source:
+    https://github.com/ghdl/ghdl/tree/v6.0.0
+  Release and official platform wheels:
+    https://github.com/ghdl/ghdl/releases/tag/v6.0.0
+  License text in the official wheel:
+    pyghdl-6.0.0.dist-info/licenses/COPYING.md
+
+The official pyGHDL wheel is platform-specific and contains libghdl plus GHDL
+standard/IEEE VHDL resources. It is not part of the HDL-X wheel or attached as
+an HDL-X-owned release artifact.
+
+Resolved runtime wheelhouse used for the v0.1.1 release smoke test
+------------------------------------------------------------------
+
+The machine-readable component versions, wheel SHA-256 values, dependency
+relationships, source links, and license identifiers are in SBOM.cdx.json.
+The resolved Windows CPython 3.13 wheelhouse contained:
+
+  annotated-doc 0.0.5                 MIT
+  annotated-types 0.8.0               MIT
+  Click (vendored in Typer 0.27.1)    BSD-3-Clause
+  colorama 0.4.6                      BSD-3-Clause
+  Jinja2 3.1.6                        BSD-3-Clause
+  markdown-it-py 4.2.0                MIT
+  MarkupSafe 3.0.3                    BSD-3-Clause
+  mdurl 0.1.2                         MIT
+  pydantic 2.13.4                     MIT
+  pydantic_core 2.46.4                MIT
+  pyGHDL 6.0.0                        GPL-2.0-or-later
+  Pygments 2.21.0                     BSD-2-Clause
+  pyTooling 8.19.0                    Apache-2.0
+  pyVHDLModel 0.39.0                  Apache-2.0
+  rich 15.0.0                         MIT
+  shellingham 1.5.4                   ISC
+  typer 0.27.1                        MIT
+  typing_extensions 4.16.0            PSF-2.0
+  typing-inspection 0.4.4             MIT
+
+Upstream source and license locations
+-------------------------------------
+
+  annotated-doc:      https://github.com/fastapi/annotated-doc
+  annotated-types:    https://github.com/annotated-types/annotated-types
+  Click:              https://github.com/pallets/click
+  colorama:           https://github.com/tartley/colorama
+  Jinja2:             https://github.com/pallets/jinja
+  markdown-it-py:     https://github.com/executablebooks/markdown-it-py
+  MarkupSafe:         https://github.com/pallets/markupsafe
+  mdurl:              https://github.com/executablebooks/mdurl
+  pydantic:           https://github.com/pydantic/pydantic
+  pydantic_core:      https://github.com/pydantic/pydantic-core
+  pyGHDL/libghdl:     https://github.com/ghdl/ghdl
+  Pygments:           https://github.com/pygments/pygments
+  pyTooling:          https://github.com/pyTooling/pyTooling
+  pyVHDLModel:        https://github.com/VHDL/pyVHDLModel
+  rich:               https://github.com/Textualize/rich
+  shellingham:        https://github.com/sarugaku/shellingham
+  typer:              https://github.com/fastapi/typer
+  typing_extensions:  https://github.com/python/typing_extensions
+  typing-inspection:  https://github.com/pydantic/typing-inspection
+
+Corresponding source and retention
+----------------------------------
+
+HDL-X corresponding source is retained in the public GitHub repository and in
+the v0.1.1 GitHub Release source archive:
+
+  https://github.com/ronghui0411/HDL-X
+
+Third-party corresponding source is available from the upstream locations
+listed above. The release SBOM and this notice are attached to the GitHub
+Release and retained in the repository root. No third-party wheel is presented
+as an HDL-X-owned artifact.

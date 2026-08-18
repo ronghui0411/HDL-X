@@ -1,8 +1,11 @@
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from hdl_x.cli.main import app
+
+pytestmark = pytest.mark.ghdl_integration
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 runner = CliRunner()

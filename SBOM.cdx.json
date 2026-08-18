@@ -1,0 +1,983 @@
+{
+  "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:1da6bafb-6015-592e-8aca-eeff11fe40ef",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-08-18T06:31:43Z",
+    "component": {
+      "type": "application",
+      "bom-ref": "pkg:pypi/hdl-x@0.1.1",
+      "name": "hdl-x",
+      "version": "0.1.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d6e1ef767d1ba70e6f72682b6aa3f0582a02e6c5a220f1d5397b1a13012fdb0c"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/hdl-x@0.1.1",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "hdl_x-0.1.1-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        },
+        {
+          "name": "hdl-x:release",
+          "value": "v0.1.1"
+        },
+        {
+          "name": "hdl-x:contains-pyghdl",
+          "value": "false"
+        },
+        {
+          "name": "hdl-x:sbom-scope",
+          "value": "Windows CPython 3.13 release wheelhouse"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/ronghui0411/HDL-X"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/ronghui0411/HDL-X/issues"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "hdl-x:pyghdl-bundled-in-project-wheel",
+        "value": "false"
+      },
+      {
+        "name": "hdl-x:pyinstaller-exe-released",
+        "value": "false"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/annotated-doc@0.0.5",
+      "name": "annotated-doc",
+      "version": "0.0.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/annotated-doc@0.0.5",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "annotated_doc-0.0.5-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/fastapi/annotated-doc"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/fastapi/annotated-doc/issues"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/fastapi/annotated-doc/release-notes.md"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/annotated-types@0.8.0",
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/annotated-types@0.8.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "annotated_types-0.8.0-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/annotated-types/annotated-types"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/annotated-types/annotated-types/releases"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/colorama@0.4.6",
+      "name": "colorama",
+      "version": "0.4.6",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:pypi/colorama@0.4.6",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "colorama-0.4.6-py2.py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/tartley/colorama"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jinja2@3.1.6",
+      "name": "Jinja2",
+      "version": "3.1.6",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:pypi/jinja2@3.1.6",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "jinja2-3.1.6-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://jinja.palletsprojects.com/changes/"
+        },
+        {
+          "type": "website",
+          "url": "https://discord.gg/pallets"
+        },
+        {
+          "type": "website",
+          "url": "https://jinja.palletsprojects.com/"
+        },
+        {
+          "type": "website",
+          "url": "https://palletsprojects.com/donate"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pallets/jinja/"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/markdown-it-py@4.2.0",
+      "name": "markdown-it-py",
+      "version": "4.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/markdown-it-py@4.2.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "markdown_it_py-4.2.0-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://markdown-it-py.readthedocs.io"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/executablebooks/markdown-it-py"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/markupsafe@3.0.3",
+      "name": "MarkupSafe",
+      "version": "3.0.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9a1abfdc021a164803f4d485104931fb8f8c1efd55bc6b748d2f5774e78b62c5"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:pypi/markupsafe@3.0.3",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "markupsafe-3.0.3-cp313-cp313-win_amd64.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://palletsprojects.com/donate"
+        },
+        {
+          "type": "website",
+          "url": "https://markupsafe.palletsprojects.com/"
+        },
+        {
+          "type": "website",
+          "url": "https://markupsafe.palletsprojects.com/page/changes/"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pallets/markupsafe/"
+        },
+        {
+          "type": "website",
+          "url": "https://discord.gg/pallets"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mdurl@0.1.2",
+      "name": "mdurl",
+      "version": "0.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/mdurl@0.1.2",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "mdurl-0.1.2-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/executablebooks/mdurl"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pydantic-core@2.46.4",
+      "name": "pydantic_core",
+      "version": "2.46.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6b3ace8194b0e5204818c92802dcdca7fc6d88aabbb799d7c795540d9cd6d292"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/pydantic-core@2.46.4",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "pydantic_core-2.46.4-cp313-cp313-win_amd64.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/sponsors/samuelcolvin"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pydantic"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pydantic/pydantic/tree/main/pydantic-core"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pydantic/pydantic"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pydantic@2.13.4",
+      "name": "pydantic",
+      "version": "2.13.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "45a282cde31d808236fd7ea9d919b128653c8b38b393d1c4ab335c62924d9aba"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/pydantic@2.13.4",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "pydantic-2.13.4-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/pydantic/pydantic"
+        },
+        {
+          "type": "website",
+          "url": "https://docs.pydantic.dev"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/sponsors/samuelcolvin"
+        },
+        {
+          "type": "website",
+          "url": "https://docs.pydantic.dev/latest/changelog/"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyghdl@6.0.0",
+      "name": "pyGHDL",
+      "version": "6.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "624ce2fcb3163c16215e7d0390caaf91bd0ae50a77dcb2b60e2eae35a5ebe839"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "GPL-2.0-or-later"
+        }
+      ],
+      "purl": "pkg:pypi/pyghdl@6.0.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "pyghdl-6.0.0-cp313-cp313-win_amd64.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://ghdl.GitHub.io/pyGHDL"
+        },
+        {
+          "type": "website",
+          "url": "https://GitHub.com/ghdl/pyGHDL"
+        },
+        {
+          "type": "website",
+          "url": "https://GitHub.com/ghdl/pyGHDL/issues"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pygments@2.21.0",
+      "name": "Pygments",
+      "version": "2.21.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "BSD-2-Clause"
+        }
+      ],
+      "purl": "pkg:pypi/pygments@2.21.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "pygments-2.21.0-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://pygments.org"
+        },
+        {
+          "type": "website",
+          "url": "https://pygments.org/docs"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pygments/pygments"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pygments/pygments/issues"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pygments/pygments/blob/master/CHANGES"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pytooling@8.19.0",
+      "name": "pyTooling",
+      "version": "8.19.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5fcdaa82589e0e3110188b5faf1b0ad11588d771c71611ad3166623dd738f567"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:pypi/pytooling@8.19.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "pytooling-8.19.0-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://pyTooling.GitHub.io/pyTooling"
+        },
+        {
+          "type": "website",
+          "url": "https://GitHub.com/pyTooling/pyTooling"
+        },
+        {
+          "type": "website",
+          "url": "https://GitHub.com/pyTooling/pyTooling/issues"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyvhdlmodel@0.39.0",
+      "name": "pyVHDLModel",
+      "version": "0.39.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8eace7cc310bbda5f2dc649c7b5c4c58856a3295a5cd0ccf68a99b0dda929f93"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:pypi/pyvhdlmodel@0.39.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "pyvhdlmodel-0.39.0-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://VHDL.GitHub.io/pyVHDLModel"
+        },
+        {
+          "type": "website",
+          "url": "https://GitHub.com/VHDL/pyVHDLModel"
+        },
+        {
+          "type": "website",
+          "url": "https://GitHub.com/VHDL/pyVHDLModel/issues"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/rich@15.0.0",
+      "name": "rich",
+      "version": "15.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/rich@15.0.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "rich-15.0.0-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://rich.readthedocs.io/en/latest/"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/Textualize/rich"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/shellingham@1.5.4",
+      "name": "shellingham",
+      "version": "1.5.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:pypi/shellingham@1.5.4",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "shellingham-1.5.4-py2.py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/sarugaku/shellingham"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typer@0.27.1",
+      "name": "typer",
+      "version": "0.27.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "53150287edd11baeb4e4722c8e394fcdf8181c0ae89485cba8d25c778d5edd56"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/typer@0.27.1",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "typer-0.27.1-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/fastapi/typer"
+        },
+        {
+          "type": "website",
+          "url": "https://typer.tiangolo.com"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/fastapi/typer/issues"
+        },
+        {
+          "type": "website",
+          "url": "https://typer.tiangolo.com/release-notes/"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typing-extensions@4.16.0",
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "PSF-2.0"
+        }
+      ],
+      "purl": "pkg:pypi/typing-extensions@4.16.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "typing_extensions-4.16.0-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/python/typing_extensions/issues"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/python/typing_extensions/blob/main/CHANGELOG.md"
+        },
+        {
+          "type": "website",
+          "url": "https://typing-extensions.readthedocs.io/"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/python/typing_extensions"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/python/typing/discussions"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typing-inspection@0.4.4",
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/typing-inspection@0.4.4",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "typing_inspection-0.4.4-py3-none-any.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/pydantic/typing-inspection"
+        },
+        {
+          "type": "website",
+          "url": "https://pydantic.github.io/typing-inspection/dev/"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/pydantic/typing-inspection/blob/main/HISTORY.md"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "urn:hdl-x:vendored:click:typer-0.27.1",
+      "name": "Click",
+      "version": "vendored in Typer 0.27.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3aac1697fc9c2cbb4c1004456040048c4148fdfe964e9860fd5fdc905b9392b2"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/pallets/click"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hdl-x:embedded-in",
+          "value": "typer 0.27.1"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "vendored-dependency-code"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:pypi/annotated-doc@0.0.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/annotated-types@0.8.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/colorama@0.4.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/hdl-x@0.1.1",
+      "dependsOn": [
+        "pkg:pypi/jinja2@3.1.6",
+        "pkg:pypi/pydantic@2.13.4",
+        "pkg:pypi/pyghdl@6.0.0",
+        "pkg:pypi/typer@0.27.1"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/jinja2@3.1.6",
+      "dependsOn": [
+        "pkg:pypi/markupsafe@3.0.3"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/markdown-it-py@4.2.0",
+      "dependsOn": [
+        "pkg:pypi/mdurl@0.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/markupsafe@3.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/mdurl@0.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pydantic-core@2.46.4",
+      "dependsOn": [
+        "pkg:pypi/typing-extensions@4.16.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/pydantic@2.13.4",
+      "dependsOn": [
+        "pkg:pypi/annotated-types@0.8.0",
+        "pkg:pypi/pydantic-core@2.46.4",
+        "pkg:pypi/typing-extensions@4.16.0",
+        "pkg:pypi/typing-inspection@0.4.4"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/pyghdl@6.0.0",
+      "dependsOn": [
+        "pkg:pypi/pytooling@8.19.0",
+        "pkg:pypi/pyvhdlmodel@0.39.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/pygments@2.21.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pytooling@8.19.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pyvhdlmodel@0.39.0",
+      "dependsOn": [
+        "pkg:pypi/pytooling@8.19.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/rich@15.0.0",
+      "dependsOn": [
+        "pkg:pypi/markdown-it-py@4.2.0",
+        "pkg:pypi/pygments@2.21.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/shellingham@1.5.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/typer@0.27.1",
+      "dependsOn": [
+        "pkg:pypi/annotated-doc@0.0.5",
+        "pkg:pypi/colorama@0.4.6",
+        "pkg:pypi/rich@15.0.0",
+        "pkg:pypi/shellingham@1.5.4",
+        "urn:hdl-x:vendored:click:typer-0.27.1"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/typing-extensions@4.16.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/typing-inspection@0.4.4",
+      "dependsOn": [
+        "pkg:pypi/typing-extensions@4.16.0"
+      ]
+    },
+    {
+      "ref": "urn:hdl-x:vendored:click:typer-0.27.1",
+      "dependsOn": []
+    }
+  ]
+}

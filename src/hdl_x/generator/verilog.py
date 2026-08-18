@@ -60,10 +60,12 @@ from hdl_x.ir import (
     VectorRange,
     VectorType,
 )
-from hdl_x.transformer.identifier_resolver import DesignIdentifierResolver, NameStyle
+from hdl_x.transformer.identifier_resolver import NameStyle
 from hdl_x.transformer.type_lowering import DriverAnalysis
 
 from .base import Generator
+from .verilog_ir import VerilogRenderIR
+from .verilog_lowering import VerilogLowering
 
 _UNARY_OPERATORS: dict[UnaryOperator, str] = {
     UnaryOperator.LOGICAL_NOT: "!",
@@ -102,15 +104,13 @@ _BINARY_OPERATORS: dict[BinaryOperator, tuple[str, int]] = {
 }
 
 
-class VerilogGenerator(Generator):
-    """执行 driver lowering 后通过 Jinja2 渲染 Verilog-2001。"""
+class VerilogRenderer:
+    """只渲染已经完成 Verilog-specific lowering 的目标 IR。"""
 
     def __init__(
         self,
         *,
         template_directory: Path | None = None,
-        driver_analysis: DriverAnalysis | None = None,
-        name_style: NameStyle = NameStyle.PRESERVE,
         indent: str = "    ",
     ) -> None:
         directory = template_directory or (
@@ -125,31 +125,14 @@ class VerilogGenerator(Generator):
         self._module_template = self._environment.get_template("module.j2")
         self._item_template = self._environment.get_template("item.j2")
         self._statement_template = self._environment.get_template("statement.j2")
-        self._driver_analysis = driver_analysis or DriverAnalysis()
-        self._name_style = name_style
-        self._last_name_mappings: dict[str, str] = {}
         self._indent = indent
 
-    @property
-    def name_mappings(self) -> dict[str, str]:
-        """返回上一次生成使用的作用域限定名称映射。"""
+    def render(self, render_ir: VerilogRenderIR) -> str:
+        """渲染目标 IR，并保证返回文本以一个换行结束。"""
 
-        return dict(self._last_name_mappings)
-
-    def generate(self, design: Design) -> str:
-        """生成确定性源码，并保证返回文本以一个换行结束。"""
-
-        name_resolver = DesignIdentifierResolver(self._name_style)
-        resolved = name_resolver.lower(design)
-        lowered = self._driver_analysis.lower(resolved)
-        text = self.generate_lowered(lowered)
-        self._last_name_mappings = name_resolver.mappings
-        return text
-
-    def generate_lowered(self, lowered: Design) -> str:
-        """渲染已经过标识符与 driver lowering 的 canonical Design。"""
-
-        self._last_name_mappings = {}
+        if not isinstance(render_ir, VerilogRenderIR):
+            raise TypeError("VerilogRenderer.render requires VerilogRenderIR")
+        lowered = render_ir.design
         modules = [self._render_module(module) for module in lowered.modules]
         text = "\n\n".join(modules)
         if lowered.leading_comments:
@@ -740,3 +723,54 @@ class VerilogGenerator(Generator):
                 blank = False
             normalized.append(line)
         return "\n".join(normalized).strip("\n") + "\n"
+
+
+class VerilogGenerator(Generator):
+    """v0.1 兼容 facade；新代码应显式调用 lowering 与 renderer。"""
+
+    def __init__(
+        self,
+        *,
+        template_directory: Path | None = None,
+        driver_analysis: DriverAnalysis | None = None,
+        name_style: NameStyle = NameStyle.PRESERVE,
+        indent: str = "    ",
+    ) -> None:
+        self._lowering = VerilogLowering(
+            name_style=name_style,
+            driver_analysis=driver_analysis,
+        )
+        self._renderer = VerilogRenderer(
+            template_directory=template_directory,
+            indent=indent,
+        )
+        self._last_name_mappings: dict[str, str] = {}
+
+    @property
+    def name_mappings(self) -> dict[str, str]:
+        """返回上一次生成使用的作用域限定名称映射。"""
+
+        return dict(self._last_name_mappings)
+
+    def lower(self, design: Design) -> VerilogRenderIR:
+        """兼容 facade 暴露的显式 lowering 入口。"""
+
+        render_ir = self._lowering.lower(design)
+        self._last_name_mappings = dict(render_ir.name_mappings)
+        return render_ir
+
+    def render(self, render_ir: VerilogRenderIR) -> str:
+        """渲染已完成 lowering 的目标 IR。"""
+
+        self._last_name_mappings = dict(render_ir.name_mappings)
+        return self._renderer.render(render_ir)
+
+    def generate(self, design: Design) -> str:
+        """兼容旧 API：依次执行 lowering 与 render。"""
+
+        return self.render(self.lower(design))
+
+    def generate_lowered(self, lowered: Design) -> str:
+        """兼容旧 API：渲染已由调用方降低的 canonical Design。"""
+
+        return self.render(VerilogRenderIR(design=lowered, name_mappings={}))

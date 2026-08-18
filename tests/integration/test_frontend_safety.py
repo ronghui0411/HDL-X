@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("pyGHDL", reason="真实 GHDL integration 需要 pyGHDL wheel")
-
-from hdl_x.diagnostics import SemanticError, UnsupportedConstructError
+from hdl_x.diagnostics import FrontendError, SemanticError, UnsupportedConstructError
 from hdl_x.frontend import VhdlFrontend
 from hdl_x.parser.ghdl import RawDesign, RawEntity
 from hdl_x.parser.vhdl_adapter import VhdlAdapter
 from hdl_x.pipeline import ConversionOptions, convert_file
+
+pytestmark = pytest.mark.ghdl_integration
 
 
 def test_unsupported_package_design_unit_is_not_silently_dropped(
@@ -87,10 +87,13 @@ end architecture;
         encoding="utf-8",
     )
 
-    with pytest.raises(Exception) as raised:
+    with pytest.raises(FrontendError) as raised:
         VhdlFrontend().parse_design(source)
 
-    assert getattr(raised.value, "code", None) == "HDLX-GHDL-ANALYZE"
+    assert raised.value.code == "HDLX-GHDL-ANALYZE"
+    assert raised.value.diagnostic.file == str(source.resolve())
+    assert raised.value.diagnostic.line == 6
+    assert raised.value.diagnostic.column == 16
 
 
 def test_type_conversion_is_not_misclassified_as_array_index(tmp_path: Path) -> None:
@@ -533,13 +536,13 @@ end architecture;
         encoding="utf-8",
     )
 
-    with pytest.raises(Exception) as raised:
+    with pytest.raises(SemanticError) as raised:
         convert_file(source, options=ConversionOptions(strict=True))
 
-    assert getattr(raised.value, "code", None) in {
-        "HDLX-GHDL-ANALYZE",
-        "HDLX-VHDL-VECTOR-LOGIC-WIDTH",
-    }
+    assert raised.value.code == "HDLX-VHDL-VECTOR-LOGIC-WIDTH"
+    assert raised.value.diagnostic.file == str(source.resolve())
+    assert raised.value.diagnostic.line == 12
+    assert raised.value.diagnostic.column == 12
 
 
 def test_literal_derived_four_state_equality_uses_exact_comparison(tmp_path: Path) -> None:

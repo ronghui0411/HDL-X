@@ -1,0 +1,88 @@
+name: v0.1 release gates
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-equivalence:
+    name: Semantic equivalence (GHDL 6.0.0 + Icarus)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        # 固定到审核过的 actions/checkout v5 commit。
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Setup Python 3.13
+        # 固定到审核过的 actions/setup-python v6 commit。
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+
+      - name: Setup GHDL 6.0.0
+        # 固定到审核过的 ghdl/setup-ghdl v1.5.1 commit。
+        uses: ghdl/setup-ghdl@75eff367dadc0cd06454a118db0b458d44fdc3c3
+        with:
+          version: "6.0.0"
+          backend: mcode
+          investigate: true
+
+      - name: Install Icarus and VVP
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes iverilog
+
+      - name: Install exact pyGHDL runtime and project
+        run: |
+          set -euxo pipefail
+          wheel=pyghdl-6.0.0-cp313-cp313-linux_x86_64.whl
+          url=https://github.com/ghdl/ghdl/releases/download/v6.0.0/$wheel
+          curl --fail --location --retry 3 --output "$wheel" "$url"
+          echo "d402d0cf73ecbec89cfe8ee3dd029f87b45ab6c8a99f954506d66d071049e797  $wheel" \
+            | sha256sum --check --strict
+          python -m pip install "./$wheel"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Record tool versions
+        run: |
+          set -euxo pipefail
+          ghdl --version | tee ghdl-version.txt
+          grep --fixed-strings "GHDL 6.0.0" ghdl-version.txt
+          iverilog -V
+          vvp -V
+          python -c "from importlib.metadata import version; assert version('pyGHDL') == '6.0.0'"
+
+      - name: Run semantic equivalence with zero skips
+        run: |
+          set -euxo pipefail
+          mkdir -p build
+          python -m pytest tests/equivalence -q -ra --require-semantic-equivalence \
+            | tee build/semantic-equivalence.log
+          grep --fixed-strings \
+            "Semantic equivalence: EXECUTED 2/2 (passed=2, failed=0, skipped=0, missing=none)" \
+            build/semantic-equivalence.log
+
+  isolated-wheel-smoke:
+    name: Isolated wheelhouse smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        # 固定到审核过的 actions/checkout v5 commit。
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Setup Python 3.13
+        # 固定到审核过的 actions/setup-python v6 commit。
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+
+      - name: Build wheelhouse and run isolated smoke
+        run: python scripts/release_wheel_smoke.py --workspace "${{ runner.temp }}/hdl-x-wheel-smoke"

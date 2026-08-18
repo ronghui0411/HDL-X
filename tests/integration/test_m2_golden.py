@@ -5,12 +5,16 @@ from pathlib import Path
 import pytest
 
 from hdl_x.diagnostics import DiagnosticSeverity, UnsupportedConstructError
+from hdl_x.frontend import VhdlFrontend
 from hdl_x.frontend.comments import (
     associate_comments_by_source_span,
     scan_vhdl_comments,
 )
+from hdl_x.generator import VerilogGenerator
 from hdl_x.ir import CommentKind, CommentPlacement
 from hdl_x.pipeline import ConversionOptions, convert_file
+
+pytestmark = pytest.mark.ghdl_integration
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 GOLDEN = Path(__file__).parents[1] / "golden"
@@ -39,6 +43,28 @@ def test_m2_real_pipeline_matches_complete_golden(case_name: str) -> None:
     assert result.text == expected
     assert result.design.top == result.design.modules[0].name
     assert result.diagnostics == ()
+
+
+@pytest.mark.parametrize(
+    "case_name",
+    [
+        "simple_and",
+        "simple_or",
+        "simple_xor",
+        "simple_not",
+        "vector_assignment",
+        "simple_expression",
+    ],
+)
+def test_m2_legacy_generate_and_pipeline_lowering_match_golden(case_name: str) -> None:
+    source_path = FIXTURES / f"m2_{case_name}.vhd"
+    expected = (GOLDEN / f"m2_{case_name}.v").read_text(encoding="utf-8")
+
+    canonical = VhdlFrontend().parse_design(source_path)
+    legacy = VerilogGenerator().generate(canonical)
+    pipeline = convert_file(source_path, options=ConversionOptions(strict=True)).text
+
+    assert legacy == pipeline == expected
 
 
 @pytest.mark.parametrize(

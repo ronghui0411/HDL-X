@@ -14,7 +14,7 @@ from .types import VectorRange
 
 
 class AssignmentKind(str, Enum):
-    """过程赋值在目标 RTL 中要求保持的更新语义。"""
+    """v0.1 兼容的目标赋值操作符提示；计划在 v0.2 后由 target IR 取代。"""
 
     BLOCKING = "blocking"
     NON_BLOCKING = "non_blocking"
@@ -33,12 +33,14 @@ class ContinuousAssignment(Statement):
 
 
 class ProceduralAssignment(Statement):
-    """显式携带 blocking/non-blocking 语义的过程赋值。"""
+    """v0.1 兼容过程赋值节点；公开 JSON 结构在本版本保持不变。"""
 
     kind: TypingLiteral["procedural_assignment"] = "procedural_assignment"
     target: ExpressionNode
     value: ExpressionNode
-    assignment_kind: AssignmentKind
+    assignment_kind: AssignmentKind = Field(
+        json_schema_extra={"deprecated": True},
+    )
 
 
 class IfStatement(Statement):

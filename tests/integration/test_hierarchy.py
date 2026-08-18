@@ -4,8 +4,6 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("pyGHDL", reason="真实 GHDL integration 需要 pyGHDL wheel")
-
 from hdl_x.diagnostics import SemanticError
 from hdl_x.frontend import VhdlFrontend
 from hdl_x.ir import Instance
@@ -18,6 +16,8 @@ from hdl_x.parser.ghdl import (
     RawTypeKind,
 )
 from hdl_x.pipeline import ConversionOptions, convert_file
+
+pytestmark = pytest.mark.ghdl_integration
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 GOLDEN = Path(__file__).parents[1] / "golden"

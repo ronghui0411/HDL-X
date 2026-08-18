@@ -23,6 +23,8 @@ from hdl_x.ir import (
 )
 from hdl_x.pipeline import ConversionOptions, convert_file
 
+pytestmark = pytest.mark.ghdl_integration
+
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 GOLDEN = Path(__file__).parents[1] / "golden"
 
@@ -46,7 +48,11 @@ def test_m5_real_pipeline_matches_complete_golden(case_name: str) -> None:
 
     assert result.text == expected
     assert result.design.top == result.design.modules[0].name
-    assert result.diagnostics == ()
+    if case_name == "parameterized_counter":
+        assert [item.code for item in result.diagnostics] == ["HDLX-VHDL-INITIAL-STATE"]
+        assert result.diagnostics[0].line == 17
+    else:
+        assert result.diagnostics == ()
 
 
 def test_m5_generic_defaults_remain_symbolic_in_declaration_order() -> None:

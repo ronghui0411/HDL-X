@@ -3,7 +3,10 @@ from pathlib import Path
 import pytest
 
 from hdl_x.diagnostics import SemanticError, UnsupportedConstructError
+from hdl_x.generator import VerilogGenerator
 from hdl_x.pipeline import ConversionOptions, convert_file
+
+pytestmark = pytest.mark.ghdl_integration
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 
@@ -19,6 +22,22 @@ def test_real_vhdl_to_verilog_pipeline_simple_logic() -> None:
     assert "input wire a" in result.text
     assert "input wire b" in result.text
     assert "output wire y" in result.text
+    assert "assign y = ~a & b ^ a;" in result.text
+
+
+def test_default_pipeline_does_not_use_legacy_generate_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def reject_legacy_generate(self: VerilogGenerator, design: object) -> str:
+        raise AssertionError("pipeline must own Verilog lowering")
+
+    monkeypatch.setattr(VerilogGenerator, "generate", reject_legacy_generate)
+
+    result = convert_file(
+        FIXTURES / "simple_logic.vhd",
+        options=ConversionOptions(strict=True),
+    )
+
     assert "assign y = ~a & b ^ a;" in result.text
     assert result.text.endswith("\n")
 
@@ -129,6 +148,12 @@ architecture rtl of Commented is begin y <= a; end architecture;
     )
 
     assert {item.code for item in result.diagnostics} == {"HDLX-COMMENT-UNASSOCIATED"}
+    diagnostic = result.diagnostics[0]
+    assert diagnostic.source_span is not None
+    assert diagnostic.line == 1
+    assert diagnostic.column == 1
+    assert "file context comment" in diagnostic.message
+    assert diagnostic.source_snippet == "-- file context comment"
 
 
 def test_strict_rejects_unassociated_comment_omission(tmp_path: Path) -> None:

@@ -27,7 +27,7 @@ class PortDirection(str, Enum):
 
 
 class DriverKind(str, Enum):
-    """driver analysis 为 generator 提供的驱动类别。"""
+    """v0.1 兼容的 Verilog storage 提示；计划在 v0.2 后移入 target IR。"""
 
     CONTINUOUS = "continuous"
     PROCEDURAL = "procedural"
@@ -49,7 +49,10 @@ class Port(IRNode):
     name: str = Field(min_length=1)
     direction: PortDirection
     rtl_type: RTLTypeNode
-    driver_kind: DriverKind | None = None
+    driver_kind: DriverKind | None = Field(
+        default=None,
+        json_schema_extra={"deprecated": True},
+    )
 
 
 class Signal(IRNode):
@@ -59,7 +62,10 @@ class Signal(IRNode):
     name: str = Field(min_length=1)
     rtl_type: RTLTypeNode
     initial_value: ExpressionNode | None = None
-    driver_kind: DriverKind | None = None
+    driver_kind: DriverKind | None = Field(
+        default=None,
+        json_schema_extra={"deprecated": True},
+    )
 
 
 class Variable(IRNode):

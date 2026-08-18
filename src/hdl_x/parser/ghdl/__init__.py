@@ -41,10 +41,17 @@ from .raw import (
     RawUnaryExpression,
     RawUnaryOperator,
 )
+from .runtime import (
+    SUPPORTED_PYGHDL_VERSION,
+    PyGhdlRuntimeStatus,
+    inspect_pyghdl_runtime,
+    require_pyghdl_runtime,
+)
 
 __all__ = [
     "GhdlFrontendBackend",
     "PyGhdlBackend",
+    "PyGhdlRuntimeStatus",
     "RawArchitecture",
     "RawArchitectureItem",
     "RawAssociation",
@@ -82,4 +89,7 @@ __all__ = [
     "RawTypeKind",
     "RawUnaryExpression",
     "RawUnaryOperator",
+    "SUPPORTED_PYGHDL_VERSION",
+    "inspect_pyghdl_runtime",
+    "require_pyghdl_runtime",
 ]

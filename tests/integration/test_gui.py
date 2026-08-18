@@ -1,7 +1,11 @@
 from pathlib import Path
 
+import pytest
+
 from hdl_x.gui import ConversionRequest, execute_conversion
 from hdl_x.transformer import NameStyle
+
+pytestmark = pytest.mark.ghdl_integration
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 

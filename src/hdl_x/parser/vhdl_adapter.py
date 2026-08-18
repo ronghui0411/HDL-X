@@ -1840,8 +1840,13 @@ class VhdlAdapter(ParserAdapter[RawDesign]):
     def _span(source: RawSourceLocation | None) -> SourceSpan | None:
         if source is None:
             return None
-        location = SourceLocation(file=str(source.file), line=source.line, column=source.column)
-        return SourceSpan(start=location, end=location.model_copy())
+        start = SourceLocation(file=str(source.file), line=source.line, column=source.column)
+        end = SourceLocation(
+            file=str(source.file),
+            line=source.end_line if source.end_line is not None else source.line,
+            column=source.end_column if source.end_column is not None else source.column,
+        )
+        return SourceSpan(start=start, end=end)
 
     @staticmethod
     def _raise_semantic(source: RawSourceLocation | None, message: str, code: str) -> None:

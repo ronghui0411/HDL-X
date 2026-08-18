@@ -18,6 +18,8 @@ from hdl_x.ir import (
 )
 from hdl_x.pipeline import ConversionOptions, convert_file
 
+pytestmark = pytest.mark.ghdl_integration
+
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 GOLDEN = Path(__file__).parents[1] / "golden"
 

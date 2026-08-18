@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("pyGHDL", reason="真实 GHDL integration 需要 pyGHDL wheel")
-
-from hdl_x.diagnostics import UnsupportedConstructError
+from hdl_x.diagnostics import FrontendError, UnsupportedConstructError
 from hdl_x.ir import ForGenerate, IfGenerate, Instance, RangeDirection, Signal
 from hdl_x.parser.ghdl import PyGhdlBackend, RawForGenerate, RawIfGenerate
 from hdl_x.parser.ghdl.pyghdl_backend import _load_api
 from hdl_x.pipeline import ConversionOptions, convert_file
+
+pytestmark = pytest.mark.ghdl_integration
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "vhdl"
 GOLDEN = Path(__file__).parents[1] / "golden"
@@ -117,11 +117,19 @@ def test_m7_generate_fallback_restores_parser_flags() -> None:
 
 
 @pytest.mark.parametrize(
-    "fixture",
-    ["m7_generate_unresolved.vhd", "m7_generate_dynamic.vhd"],
+    ("fixture", "column"),
+    [("m7_generate_unresolved.vhd", 24), ("m7_generate_dynamic.vhd", 16)],
 )
-def test_m7_generate_fallback_runs_real_ghdl_semantics(fixture: str) -> None:
-    with pytest.raises(Exception) as raised:
-        PyGhdlBackend().parse(FIXTURES / fixture)
+def test_m7_generate_fallback_runs_real_ghdl_semantics(
+    fixture: str,
+    column: int,
+) -> None:
+    source = (FIXTURES / fixture).resolve()
 
-    assert getattr(raised.value, "code", None) == "HDLX-GHDL-ANALYZE"
+    with pytest.raises(FrontendError) as raised:
+        PyGhdlBackend().parse(source)
+
+    assert raised.value.code == "HDLX-GHDL-ANALYZE"
+    assert raised.value.diagnostic.file == str(source)
+    assert raised.value.diagnostic.line == 10
+    assert raised.value.diagnostic.column == column
