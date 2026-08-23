@@ -39,12 +39,14 @@ tag 或 GitHub Release；禁止 force push。v0.1.1 历史证据保留在 `RELEA
 ## 本地与远端测试门禁
 
 - [x] 本地真实 Slang integration：`41 passed, 0 skipped`（pyslang 11.0.0）。
-- [ ] 具备 Icarus/VVP 的最终远端 SystemVerilog compile/equivalence：`8 passed, 0 skipped`。
-- [ ] 最终远端 VHDL semantic equivalence：`2 passed, 0 skipped`。
+- [x] 具备 Icarus/VVP 的远端 SystemVerilog compile/equivalence：`8 passed, 0 skipped`。
+- [x] 远端 VHDL semantic equivalence：`2 passed, 0 skipped`。
 - [x] 本地完整 pytest 331 passed、10 个外部模拟器缺失 skip；GHDL 129/129、Ruff、compileall、pip check、diff check 全部通过，skip 未计为 pass。
 - [x] workflow actions 全部固定到审核后的 40 位 commit SHA，Ubuntu 为 24.04。
 - [x] workflow 文本门禁强制 Slang 41/41 与 SystemVerilog equivalence 8/8，失败或 skip 均失败。
-- [ ] 本轮普通 commit/push 后读取真实远端 run，四个 job 全部 success。
+- [x] run 32643506887 日志：Slang integration 41/41；SV compile/equivalence 8/8；VHDL semantic equivalence 2/2；均为 failed=0、skipped=0。
+- [x] 同一 run 的完整质量 job 为 341 passed、0 skipped，GHDL 129/129、Slang marker 49/49、Ruff/compileall/pip check/golden diff 通过；isolated wheelhouse smoke 为 `ISOLATED_WHEELHOUSE_SMOKE=PASSED`。
+- [x] freeze commit `36bb07045a1213c94f8e26d00dd6dd1f181d4614` 已普通 push；真实 GitHub Actions [run 32643506887](https://github.com/ronghui0411/HDL-X/actions/runs/32643506887) 四个 job 全部 success。
 
 ## 版本、wheel、SBOM 与 NOTICE
 
