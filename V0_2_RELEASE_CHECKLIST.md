@@ -22,7 +22,7 @@ v0.2 tag 或 GitHub Release。v0.1.1 的历史证据继续保留在 `RELEASE_CHE
   `pyslang` 类型。
 - [x] `--require-slang-integration` 在 runtime 缺失、版本不精确、零选择或 skip 时失败。
 - [x] 本地真实 frontend gate 保持 `30 passed, 0 skipped`，没有为新增负面覆盖增加收集数。
-- [ ] 远端 `systemverilog-mvp` 实际得到 Slang `30 passed, 0 skipped`。
+- [x] 远端 `systemverilog-mvp` 实际得到 Slang `30 passed, 0 skipped`。
 
 ## 语义边界与负面门禁
 
@@ -47,9 +47,9 @@ v0.2 tag 或 GitHub Release。v0.1.1 的历史证据继续保留在 `RELEASE_CHE
   `libgnat-13`。
 - [x] CI 文本门禁强制 Slang `30/30 passed, 0 skipped` 和 SystemVerilog compile/
   equivalence `4/4 passed, 0 skipped`。
-- [ ] 远端 SystemVerilog compile/equivalence 实际得到 `4 passed, 0 skipped`。
-- [ ] 远端 VHDL semantic equivalence 实际得到 `2 passed, 0 skipped`。
-- [ ] 远端完整质量 job 与 isolated wheelhouse smoke 全部成功。
+- [x] 远端 SystemVerilog compile/equivalence 实际得到 `4 passed, 0 skipped`。
+- [x] 远端 VHDL semantic equivalence 实际得到 `2 passed, 0 skipped`。
+- [x] 远端完整质量 job 与 isolated wheelhouse smoke 全部成功。
 
 ## 版本、wheel、SBOM 与 NOTICE
 
@@ -68,6 +68,8 @@ v0.2 tag 或 GitHub Release。v0.1.1 的历史证据继续保留在 `RELEASE_CHE
   上游源码与“不捆绑进 HDL-X wheel”的边界。
 - [x] 0.2.0-rc1 不构建、不发布 PyInstaller EXE。
 - [x] 当前请求只授权 commit/push/等待 CI；暂不创建 tag 或 Release。
+
+远端验收证据：候选代码提交 `3f4c29911f0a82b313f8201ce4e930a592abb084` 的 GitHub Actions [run 32639207648](https://github.com/ronghui0411/HDL-X/actions/runs/32639207648) 实际得到 Slang `30/30`、SystemVerilog equivalence `4/4`、VHDL semantic equivalence `2/2`，均为 `failed=0, skipped=0`；完整质量门禁为 `319 passed`，VHDL golden 基线步骤和 isolated wheelhouse smoke 均成功。
 
 本地最终证据：完整 pytest `313 passed, 6 skipped`；GHDL integration `129/129 passed,
 0 skipped`；6 个 skip 仅因本机缺少 `ghdl`/`iverilog`/`vvp`，没有计为等价通过。
