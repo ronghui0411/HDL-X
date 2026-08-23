@@ -196,6 +196,7 @@ jobs:
       - name: Run complete zero-skip test gate
         run: |
           set -euxo pipefail
+          mkdir -p build
           python -m pytest -q -ra -p no:cacheprovider \
             --require-ghdl-integration \
             --require-slang-integration \
