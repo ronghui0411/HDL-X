@@ -11,10 +11,12 @@ import subprocess
 import sys
 import venv
 from pathlib import Path
+from time import sleep
 from urllib.request import Request, urlopen
 
 _PYGHDL_VERSION = "6.0.0"
-_PROJECT_VERSION = "0.1.1"
+_PYSLANG_VERSION = "11.0.0"
+_PROJECT_VERSION = "0.2.0rc1"
 _PYGHDL_ASSETS = {
     ("linux", "x86_64", (3, 13)): (
         "pyghdl-6.0.0-cp313-cp313-linux_x86_64.whl",
@@ -26,6 +28,22 @@ _PYGHDL_ASSETS = {
     ),
 }
 _RELEASE_BASE_URL = "https://github.com/ghdl/ghdl/releases/download/v6.0.0"
+_PYSLANG_ASSETS = {
+    ("linux", "x86_64", (3, 13)): (
+        "pyslang-11.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "https://files.pythonhosted.org/packages/23/cc/"
+        "4277ce5f936c892daa6924bd5e89dd25d46385d757d9a1b313f67c833e8f/"
+        "pyslang-11.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "3557e20a45b5535e24ed2481ab07d2ea136ec6e17e448f846eff38c8bf2dde22",
+    ),
+    ("win32", "amd64", (3, 13)): (
+        "pyslang-11.0.0-cp313-cp313-win_amd64.whl",
+        "https://files.pythonhosted.org/packages/62/e1/"
+        "b525b2db646585526035908f10bb02b6435e4a78b5847eac604cc18efb14/"
+        "pyslang-11.0.0-cp313-cp313-win_amd64.whl",
+        "b9cae2cc3d856bf7e52620a74cf9e2bb687c280ecccf70fbb63e49e690e77a47",
+    ),
+}
 
 
 def _sha256(path: Path) -> str:
@@ -41,17 +59,31 @@ def _run(arguments: list[str], *, cwd: Path, env: dict[str, str]) -> None:
     subprocess.run(arguments, cwd=cwd, env=env, check=True)
 
 
-def _download(url: str, destination: Path, expected_sha256: str) -> None:
+def _download(
+    url: str,
+    destination: Path,
+    expected_sha256: str,
+    *,
+    label: str,
+) -> None:
     request = Request(url, headers={"User-Agent": f"HDL-X-release-smoke/{_PROJECT_VERSION}"})
     temporary = destination.with_suffix(destination.suffix + ".part")
     print(f"Downloading official asset: {url}", flush=True)
-    with urlopen(request, timeout=120) as response, temporary.open("wb") as output:
-        while block := response.read(1024 * 1024):
-            output.write(block)
+    for attempt in range(1, 4):
+        try:
+            with urlopen(request, timeout=120) as response, temporary.open("wb") as output:
+                while block := response.read(1024 * 1024):
+                    output.write(block)
+            break
+        except (OSError, TimeoutError) as error:
+            if attempt == 3:
+                raise
+            print(f"Download attempt {attempt}/3 failed: {error}; retrying", flush=True)
+            sleep(attempt)
     actual = _sha256(temporary)
     if actual != expected_sha256:
         raise RuntimeError(
-            f"pyGHDL wheel SHA-256 mismatch: expected {expected_sha256}, got {actual}"
+            f"{label} wheel SHA-256 mismatch: expected {expected_sha256}, got {actual}"
         )
     temporary.replace(destination)
 
@@ -75,6 +107,18 @@ def _asset_for_runtime() -> tuple[str, str]:
     except KeyError as error:
         raise RuntimeError(
             "No audited pyGHDL wheel for runtime "
+            f"platform={sys.platform}, machine={platform.machine()}, "
+            f"python={sys.version_info.major}.{sys.version_info.minor}"
+        ) from error
+
+
+def _pyslang_asset_for_runtime() -> tuple[str, str, str]:
+    key = (sys.platform, platform.machine().lower(), sys.version_info[:2])
+    try:
+        return _PYSLANG_ASSETS[key]
+    except KeyError as error:
+        raise RuntimeError(
+            "No audited pyslang wheel for runtime "
             f"platform={sys.platform}, machine={platform.machine()}, "
             f"python={sys.version_info.major}.{sys.version_info.minor}"
         ) from error
@@ -108,6 +152,15 @@ def run_smoke(workspace: Path) -> None:
         f"{_RELEASE_BASE_URL}/{asset_name}",
         pyghdl_wheel,
         asset_sha256,
+        label="pyGHDL",
+    )
+    pyslang_name, pyslang_url, pyslang_sha256 = _pyslang_asset_for_runtime()
+    pyslang_wheel = official / pyslang_name
+    _download(
+        pyslang_url,
+        pyslang_wheel,
+        pyslang_sha256,
+        label="pyslang",
     )
 
     environment = os.environ.copy()
@@ -135,6 +188,7 @@ def run_smoke(workspace: Path) -> None:
             "--only-binary=:all:",
             str(project_wheel),
             str(pyghdl_wheel),
+            str(pyslang_wheel),
         ],
         cwd=smoke_work,
         env=environment,
@@ -157,7 +211,7 @@ def run_smoke(workspace: Path) -> None:
             "--no-index",
             "--find-links",
             str(wheelhouse),
-            f"hdl-x=={_PROJECT_VERSION}",
+            f"hdl-x[systemverilog]=={_PROJECT_VERSION}",
         ],
         cwd=smoke_work,
         env=environment,
@@ -169,7 +223,8 @@ def run_smoke(workspace: Path) -> None:
             "-c",
             "from importlib.metadata import version; "
             f"assert version('hdl-x') == '{_PROJECT_VERSION}'; "
-            f"assert version('pyGHDL') == '{_PYGHDL_VERSION}'",
+            f"assert version('pyGHDL') == '{_PYGHDL_VERSION}'; "
+            f"assert version('pyslang') == '{_PYSLANG_VERSION}'",
         ],
         cwd=smoke_work,
         env=environment,
@@ -199,11 +254,40 @@ def run_smoke(workspace: Path) -> None:
     if generated.read_bytes() != golden.read_bytes():
         raise RuntimeError("Installed-wheel output is not byte-identical to committed golden")
 
+    systemverilog_fixture = (
+        repository / "tests" / "fixtures" / "systemverilog" / "sv_comb_logic.sv"
+    )
+    systemverilog_golden = repository / "tests" / "golden" / "sv_comb_logic.v"
+    systemverilog_generated = smoke_work / "sv_comb_logic.v"
+    _run(
+        [
+            str(venv_cli),
+            "convert",
+            str(systemverilog_fixture),
+            "--from",
+            "systemverilog",
+            "--to",
+            "verilog",
+            "-o",
+            str(systemverilog_generated),
+            "--strict",
+        ],
+        cwd=smoke_work,
+        env=environment,
+    )
+    if systemverilog_generated.read_bytes() != systemverilog_golden.read_bytes():
+        raise RuntimeError(
+            "Installed-wheel SystemVerilog output is not byte-identical to committed golden"
+        )
+
     print(manifest.read_text(encoding="utf-8"), end="")
     print(f"HDL_X_WHEEL_SHA256={_sha256(project_wheel)}")
     print(f"PYGHDL_WHEEL_SHA256={_sha256(pyghdl_wheel)}")
+    print(f"PYSLANG_WHEEL_SHA256={_sha256(pyslang_wheel)}")
     print(f"GENERATED_SHA256={_sha256(generated)}")
     print(f"GOLDEN_SHA256={_sha256(golden)}")
+    print(f"SV_GENERATED_SHA256={_sha256(systemverilog_generated)}")
+    print(f"SV_GOLDEN_SHA256={_sha256(systemverilog_golden)}")
     print("ISOLATED_WHEELHOUSE_SMOKE=PASSED")
 
 

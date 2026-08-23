@@ -7,6 +7,7 @@ import sys
 from dataclasses import dataclass
 
 from hdl_x.parser.ghdl.runtime import inspect_pyghdl_runtime
+from hdl_x.parser.slang.runtime import inspect_pyslang_runtime
 from hdl_x.validator import GhdlValidator, SlangValidator, YosysValidator
 
 
@@ -42,6 +43,17 @@ def inspect_environment() -> list[EnvironmentItem]:
             version=pyghdl.installed_version,
             detail=pyghdl.detail,
             required=True,
+        )
+    )
+
+    pyslang = inspect_pyslang_runtime()
+    items.append(
+        EnvironmentItem(
+            name="SystemVerilog frontend (pyslang/Slang)",
+            available=pyslang.available,
+            version=pyslang.installed_version,
+            detail=pyslang.detail,
+            required=False,
         )
     )
 

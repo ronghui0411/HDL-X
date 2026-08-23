@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from bisect import bisect_right
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,9 +74,7 @@ class VhdlCommentScanner:
         raw_text = line[marker_index + 2 :]
         text, kind = self._normalize_text(raw_text)
         placement = (
-            CommentPlacement.TRAILING
-            if line[:marker_index].strip()
-            else CommentPlacement.LEADING
+            CommentPlacement.TRAILING if line[:marker_index].strip() else CommentPlacement.LEADING
         )
         span = SourceSpan(
             start=SourceLocation(
@@ -149,6 +148,134 @@ class VhdlCommentScanner:
         return raw_line
 
 
+class SystemVerilogCommentScanner:
+    """扫描 SystemVerilog 行/块注释，不替代 Slang 语法分析。"""
+
+    def __init__(self, *, file: str | Path | None = None) -> None:
+        self.file = str(file) if file is not None else None
+
+    def scan(self, source: str) -> list[Comment]:
+        """按源码顺序提取注释，并忽略字符串与 escaped identifier。"""
+
+        comments: list[Comment] = []
+        line_starts = [0]
+        line_starts.extend(index + 1 for index, character in enumerate(source) if character == "\n")
+        index = 0
+        in_string = False
+        in_escaped_identifier = False
+
+        while index < len(source):
+            character = source[index]
+            if in_string:
+                if character == "\\":
+                    index += 2
+                    continue
+                if character == '"':
+                    in_string = False
+                index += 1
+                continue
+            if in_escaped_identifier:
+                if character.isspace():
+                    in_escaped_identifier = False
+                index += 1
+                continue
+            if character == '"':
+                in_string = True
+                index += 1
+                continue
+            if character == "\\":
+                in_escaped_identifier = True
+                index += 1
+                continue
+            if source.startswith("//", index):
+                end = index + 2
+                while end < len(source) and source[end] not in "\r\n":
+                    end += 1
+                comments.append(
+                    self._make_comment(
+                        source,
+                        start=index,
+                        end=end,
+                        body=source[index + 2 : end],
+                        kind=CommentKind.LINE,
+                        line_starts=line_starts,
+                    )
+                )
+                index = end
+                continue
+            if source.startswith("/*", index):
+                marker = source.find("*/", index + 2)
+                end = len(source) if marker < 0 else marker + 2
+                body_end = len(source) if marker < 0 else marker
+                comments.append(
+                    self._make_comment(
+                        source,
+                        start=index,
+                        end=end,
+                        body=source[index + 2 : body_end],
+                        kind=CommentKind.BLOCK,
+                        line_starts=line_starts,
+                    )
+                )
+                index = end
+                continue
+            index += 1
+
+        return comments
+
+    def _make_comment(
+        self,
+        source: str,
+        *,
+        start: int,
+        end: int,
+        body: str,
+        kind: CommentKind,
+        line_starts: Sequence[int],
+    ) -> Comment:
+        line_start = source.rfind("\n", 0, start) + 1
+        placement = (
+            CommentPlacement.TRAILING
+            if source[line_start:start].strip()
+            else CommentPlacement.LEADING
+        )
+        text, normalized_kind = self._normalize_text(body, kind)
+        return Comment(
+            text=text,
+            kind=normalized_kind,
+            placement=placement,
+            source_span=SourceSpan(
+                start=self._location(start, line_starts),
+                end=self._location(end, line_starts),
+            ),
+        )
+
+    def _location(self, offset: int, line_starts: Sequence[int]) -> SourceLocation:
+        line_index = bisect_right(line_starts, offset) - 1
+        return SourceLocation(
+            file=self.file,
+            line=line_index + 1,
+            column=offset - line_starts[line_index] + 1,
+            offset=offset,
+        )
+
+    @staticmethod
+    def _normalize_text(body: str, kind: CommentKind) -> tuple[str, CommentKind]:
+        text = body
+        normalized_kind = kind
+        if kind is CommentKind.LINE and text.startswith(("/", "!")):
+            normalized_kind = CommentKind.DOC
+            text = text[1:]
+        elif kind is CommentKind.BLOCK and text.startswith(("*", "!")):
+            normalized_kind = CommentKind.DOC
+            text = text[1:]
+        if text.startswith((" ", "\t")):
+            text = text[1:]
+        if kind is CommentKind.BLOCK:
+            text = text.rstrip()
+        return (text or " "), normalized_kind
+
+
 def scan_vhdl_comments(
     source: str,
     *,
@@ -159,11 +286,22 @@ def scan_vhdl_comments(
     return VhdlCommentScanner(file=file).scan(source)
 
 
+def scan_systemverilog_comments(
+    source: str,
+    *,
+    file: str | Path | None = None,
+) -> list[Comment]:
+    """使用轻量扫描器提取 SystemVerilog trivia。"""
+
+    return SystemVerilogCommentScanner(file=file).scan(source)
+
+
 def associate_comments_by_source_span(
     comments: Sequence[Comment],
     nodes: Sequence[IRNode],
     *,
     source: str | None = None,
+    standalone_comment_prefixes: tuple[str, ...] = ("--",),
 ) -> CommentAssociationResult:
     """按最近 source span 关联注释，不修改注释或 canonical 节点。
 
@@ -182,7 +320,12 @@ def associate_comments_by_source_span(
             unassociated.append(comment)
             continue
 
-        node_index = _nearest_node_index(comment, nodes, source_lines=source_lines)
+        node_index = _nearest_node_index(
+            comment,
+            nodes,
+            source_lines=source_lines,
+            standalone_comment_prefixes=standalone_comment_prefixes,
+        )
         if node_index is None:
             unassociated.append(comment)
         elif comment.placement is CommentPlacement.TRAILING:
@@ -209,6 +352,7 @@ def _nearest_node_index(
     nodes: Sequence[IRNode],
     *,
     source_lines: Sequence[str] | None = None,
+    standalone_comment_prefixes: tuple[str, ...] = ("--",),
 ) -> int | None:
     assert comment.source_span is not None
     comment_span = comment.source_span
@@ -244,6 +388,7 @@ def _nearest_node_index(
             comment_span,
             node.source_span,
             source_lines,
+            standalone_comment_prefixes,
         )
     ]
     if not candidates:
@@ -262,6 +407,7 @@ def _leading_gap_contains_only_trivia(
     comment_span: SourceSpan,
     node_span: SourceSpan,
     source_lines: Sequence[str] | None,
+    standalone_comment_prefixes: tuple[str, ...],
 ) -> bool:
     """拒绝跨越真实 HDL token 的 leading 关联。"""
 
@@ -279,7 +425,9 @@ def _leading_gap_contains_only_trivia(
 
     for line_number in range(first_line, last_line + 1):
         stripped = source_lines[line_number - 1].strip()
-        if stripped and not stripped.startswith("--"):
+        if stripped and not any(
+            stripped.startswith(prefix) for prefix in standalone_comment_prefixes
+        ):
             return False
     return True
 

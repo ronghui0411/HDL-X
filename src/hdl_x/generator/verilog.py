@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,6 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from hdl_x.diagnostics import GenerationError
 from hdl_x.ir import (
     ActiveLevel,
-    AssignmentKind,
     BinaryExpr,
     BinaryOperator,
     BlockStatement,
@@ -64,7 +63,7 @@ from hdl_x.transformer.identifier_resolver import NameStyle
 from hdl_x.transformer.type_lowering import DriverAnalysis
 
 from .base import Generator
-from .verilog_ir import VerilogRenderIR
+from .verilog_ir import VerilogAssignmentOperator, VerilogRenderIR
 from .verilog_lowering import VerilogLowering
 
 _UNARY_OPERATORS: dict[UnaryOperator, str] = {
@@ -126,6 +125,7 @@ class VerilogRenderer:
         self._item_template = self._environment.get_template("item.j2")
         self._statement_template = self._environment.get_template("statement.j2")
         self._indent = indent
+        self._assignment_operators: Mapping[int, VerilogAssignmentOperator] = {}
 
     def render(self, render_ir: VerilogRenderIR) -> str:
         """渲染目标 IR，并保证返回文本以一个换行结束。"""
@@ -133,13 +133,18 @@ class VerilogRenderer:
         if not isinstance(render_ir, VerilogRenderIR):
             raise TypeError("VerilogRenderer.render requires VerilogRenderIR")
         lowered = render_ir.design
-        modules = [self._render_module(module) for module in lowered.modules]
-        text = "\n\n".join(modules)
-        if lowered.leading_comments:
-            text = "\n".join(self._render_comment_group(lowered.leading_comments)) + "\n" + text
-        if lowered.trailing_comments:
-            text += "\n" + "\n".join(self._render_comment_group(lowered.trailing_comments))
-        return self._normalize_output(text)
+        previous_operators = self._assignment_operators
+        self._assignment_operators = render_ir.assignment_operators
+        try:
+            modules = [self._render_module(module) for module in lowered.modules]
+            text = "\n\n".join(modules)
+            if lowered.leading_comments:
+                text = "\n".join(self._render_comment_group(lowered.leading_comments)) + "\n" + text
+            if lowered.trailing_comments:
+                text += "\n" + "\n".join(self._render_comment_group(lowered.trailing_comments))
+            return self._normalize_output(text)
+        finally:
+            self._assignment_operators = previous_operators
 
     def _render_module(self, module: Module) -> str:
         parameters = [self._render_parameter_entry(item) for item in module.parameters]
@@ -414,12 +419,18 @@ class VerilogRenderer:
         indent = self._indent * level
         child_indent = self._indent * (level + 1)
         if isinstance(statement, ProceduralAssignment):
-            operator = "=" if statement.assignment_kind is AssignmentKind.BLOCKING else "<="
+            operator = self._assignment_operators.get(id(statement))
+            if operator is None:
+                raise GenerationError(
+                    "Verilog render IR 缺少过程赋值操作符；必须先执行 Verilog lowering",
+                    code="HDLX-GEN-LOWERING-INCOMPLETE",
+                    source_span=statement.source_span,
+                )
             context: dict[str, Any] = {
                 "kind": "assignment",
                 "indent": indent,
                 "target": self._render_expression(statement.target),
-                "operator": operator,
+                "operator": operator.value,
                 "value": self._render_expression(statement.value),
             }
         elif isinstance(statement, IfStatement):
@@ -518,18 +529,16 @@ class VerilogRenderer:
             }
         elif isinstance(item, CombinationalProcess):
             if not item.sensitivity:
-                raise GenerationError(
-                    "combinational process lacks an explicit sensitivity list",
-                    code="HDLX-GEN-COMBINATIONAL-SENSITIVITY",
-                    source_span=item.source_span,
+                header = "always @(*)"
+            else:
+                sensitivity = " or ".join(
+                    self._render_expression(expression) for expression in item.sensitivity
                 )
-            sensitivity = " or ".join(
-                self._render_expression(expression) for expression in item.sensitivity
-            )
+                header = f"always @({sensitivity})"
             context = {
                 "kind": "process",
                 "indent": indent,
-                "header": f"always @({sensitivity})",
+                "header": header,
                 "label": item.label,
                 "body": self._render_statement_body(item.body, level + 1),
             }
@@ -773,4 +782,4 @@ class VerilogGenerator(Generator):
     def generate_lowered(self, lowered: Design) -> str:
         """兼容旧 API：渲染已由调用方降低的 canonical Design。"""
 
-        return self.render(VerilogRenderIR(design=lowered, name_mappings={}))
+        return self.render(self._lowering.wrap_lowered(lowered))

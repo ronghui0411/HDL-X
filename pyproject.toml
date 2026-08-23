@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hdl-x"
-version = "0.1.1"
+version = "0.2.0rc1"
 description = "Offline, semantics-preserving HDL source translator"
 readme = "README.md"
 authors = [{ name = "rh" }]
@@ -26,6 +26,7 @@ Issues = "https://github.com/ronghui0411/HDL-X/issues"
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "ruff>=0.12,<1"]
 exe = ["pyinstaller>=6.22,<7"]
+systemverilog = ["pyslang==11.0.0"]
 
 # pyGHDL 的官方 platform-specific wheels 目前由 GHDL release assets 分发；
 # 核心依赖仍精确声明版本，README 给出先安装匹配 wheel 的步骤。
@@ -48,7 +49,9 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
     "ghdl_integration: requires the exact supported pyGHDL/libghdl runtime and executes the real VHDL frontend",
+    "slang_integration: requires the exact supported pyslang runtime and executes the real SystemVerilog frontend",
     "semantic_equivalence: runs VHDL and generated Verilog in independent external simulators and compares traces",
+    "systemverilog_equivalence: compiles and compares SystemVerilog and generated Verilog traces with Icarus",
 ]
 
 [tool.ruff]

@@ -2,19 +2,19 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:1da6bafb-6015-592e-8aca-eeff11fe40ef",
+  "serialNumber": "urn:uuid:8eeb1c6f-97b4-5e08-992a-e3f3d0171050",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-08-18T06:31:43Z",
+    "timestamp": "2026-08-23T12:02:44Z",
     "component": {
       "type": "application",
-      "bom-ref": "pkg:pypi/hdl-x@0.1.1",
+      "bom-ref": "pkg:pypi/hdl-x@0.2.0rc1",
       "name": "hdl-x",
-      "version": "0.1.1",
+      "version": "0.2.0rc1",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d6e1ef767d1ba70e6f72682b6aa3f0582a02e6c5a220f1d5397b1a13012fdb0c"
+          "content": "062db304cebcfc07b95dbc0ba85c734c37d0edaa63bbf5c818262d5202388197"
         }
       ],
       "licenses": [
@@ -22,11 +22,11 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:pypi/hdl-x@0.1.1",
+      "purl": "pkg:pypi/hdl-x@0.2.0rc1",
       "properties": [
         {
           "name": "hdl-x:wheel-file",
-          "value": "hdl_x-0.1.1-py3-none-any.whl"
+          "value": "hdl_x-0.2.0rc1-py3-none-any.whl"
         },
         {
           "name": "hdl-x:distribution-boundary",
@@ -34,7 +34,7 @@
         },
         {
           "name": "hdl-x:release",
-          "value": "v0.1.1"
+          "value": "v0.2.0-rc1"
         },
         {
           "name": "hdl-x:contains-pyghdl",
@@ -42,7 +42,7 @@
         },
         {
           "name": "hdl-x:sbom-scope",
-          "value": "Windows CPython 3.13 release wheelhouse"
+          "value": "Windows CPython 3.13 0.2.0-rc1 wheelhouse with systemverilog extra"
         }
       ],
       "externalReferences": [
@@ -64,6 +64,10 @@
       {
         "name": "hdl-x:pyinstaller-exe-released",
         "value": "false"
+      },
+      {
+        "name": "hdl-x:active-extras",
+        "value": "systemverilog"
       }
     ]
   },
@@ -540,6 +544,56 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:pypi/pyslang@11.0.0",
+      "name": "pyslang",
+      "version": "11.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b9cae2cc3d856bf7e52620a74cf9e2bb687c280ecccf70fbb63e49e690e77a47"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:pypi/pyslang@11.0.0",
+      "properties": [
+        {
+          "name": "hdl-x:wheel-file",
+          "value": "pyslang-11.0.0-cp313-cp313-win_amd64.whl"
+        },
+        {
+          "name": "hdl-x:distribution-boundary",
+          "value": "separate-wheel"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://sv-lang.com/"
+        },
+        {
+          "type": "website",
+          "url": "https://sv-lang.com/pyslang/"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/MikePopoloski/slang"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/MikePopoloski/slang/issues"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:pypi/pytooling@8.19.0",
       "name": "pyTooling",
       "version": "8.19.0",
@@ -880,11 +934,12 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:pypi/hdl-x@0.1.1",
+      "ref": "pkg:pypi/hdl-x@0.2.0rc1",
       "dependsOn": [
         "pkg:pypi/jinja2@3.1.6",
         "pkg:pypi/pydantic@2.13.4",
         "pkg:pypi/pyghdl@6.0.0",
+        "pkg:pypi/pyslang@11.0.0",
         "pkg:pypi/typer@0.27.1"
       ]
     },
@@ -932,6 +987,10 @@
     },
     {
       "ref": "pkg:pypi/pygments@2.21.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pyslang@11.0.0",
       "dependsOn": []
     },
     {

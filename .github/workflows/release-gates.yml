@@ -1,4 +1,4 @@
-name: v0.1 release gates
+name: HDL-X 0.2.0-rc1 release gates
 
 on:
   pull_request:
@@ -63,12 +63,158 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p build
-          python -m pytest tests/equivalence -q -ra --require-semantic-equivalence \
+          python -m pytest tests/equivalence/test_differential_simulation.py -q -ra \
+            --require-semantic-equivalence \
             | tee build/semantic-equivalence.log
           grep --fixed-strings \
             "Semantic equivalence: EXECUTED 2/2 (passed=2, failed=0, skipped=0, missing=none)" \
             build/semantic-equivalence.log
 
+  systemverilog-mvp:
+    name: SystemVerilog MVP (pyslang 11.0.0 + Icarus)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        # 固定到审核过的 actions/checkout v5 commit。
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Setup Python 3.13
+        # 固定到审核过的 actions/setup-python v6 commit。
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+
+      - name: Install Icarus and native runtimes
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes iverilog libgnat-13
+          dpkg-query --show --showformat='${Package} ${Version}\n' libgnat-13
+
+      - name: Install exact frontend wheels and project
+        run: |
+          set -euxo pipefail
+          pyghdl=pyghdl-6.0.0-cp313-cp313-linux_x86_64.whl
+          pyghdl_url=https://github.com/ghdl/ghdl/releases/download/v6.0.0/$pyghdl
+          curl --fail --location --retry 3 --output "$pyghdl" "$pyghdl_url"
+          echo "d402d0cf73ecbec89cfe8ee3dd029f87b45ab6c8a99f954506d66d071049e797  $pyghdl" \
+            | sha256sum --check --strict
+
+          pyslang=pyslang-11.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+          pyslang_url=https://files.pythonhosted.org/packages/23/cc/4277ce5f936c892daa6924bd5e89dd25d46385d757d9a1b313f67c833e8f/$pyslang
+          curl --fail --location --retry 3 --output "$pyslang" "$pyslang_url"
+          echo "3557e20a45b5535e24ed2481ab07d2ea136ec6e17e448f846eff38c8bf2dde22  $pyslang" \
+            | sha256sum --check --strict
+
+          python -m pip install "./$pyghdl" "./$pyslang"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Record exact frontend and simulator versions
+        run: |
+          set -euxo pipefail
+          iverilog -V
+          vvp -V
+          python -c "from importlib.metadata import version; assert version('pyslang') == '11.0.0'"
+          python -c "from importlib.metadata import version; assert version('pyGHDL') == '6.0.0'"
+
+      - name: Run real Slang frontend regression with zero skips
+        run: |
+          set -euxo pipefail
+          mkdir -p build
+          python -m pytest tests/integration -m slang_integration -q -ra \
+            --require-slang-integration \
+            | tee build/slang-integration.log
+          grep --fixed-strings \
+            "Slang integration: EXECUTED 30/30 (passed=30, failed=0, skipped=0, pyslang=11.0.0)" \
+            build/slang-integration.log
+
+      - name: Run SystemVerilog compile and equivalence with zero skips
+        run: |
+          set -euxo pipefail
+          mkdir -p build
+          python -m pytest tests/equivalence/test_systemverilog_differential.py -q -ra \
+            --require-slang-integration --require-systemverilog-equivalence \
+            | tee build/systemverilog-equivalence.log
+          grep --fixed-strings \
+            "Slang integration: EXECUTED 4/4 (passed=4, failed=0, skipped=0, pyslang=11.0.0)" \
+            build/systemverilog-equivalence.log
+          grep --fixed-strings \
+            "SystemVerilog equivalence: EXECUTED 4/4 (passed=4, failed=0, skipped=0, missing=none)" \
+            build/systemverilog-equivalence.log
+
+  quality:
+    name: Full quality and VHDL regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        # 固定到审核过的 actions/checkout v5 commit。
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Setup Python 3.13
+        # 固定到审核过的 actions/setup-python v6 commit。
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+
+      - name: Setup GHDL 6.0.0
+        # 固定到审核过的 ghdl/setup-ghdl v1.5.1 commit。
+        uses: ghdl/setup-ghdl@75eff367dadc0cd06454a118db0b458d44fdc3c3
+        with:
+          version: "6.0.0"
+          backend: mcode
+          investigate: true
+
+      - name: Install native runtimes
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes iverilog libgnat-13
+          dpkg-query --show --showformat='${Package} ${Version}\n' libgnat-13
+
+      - name: Install exact frontend wheels and project
+        run: |
+          set -euxo pipefail
+          pyghdl=pyghdl-6.0.0-cp313-cp313-linux_x86_64.whl
+          pyghdl_url=https://github.com/ghdl/ghdl/releases/download/v6.0.0/$pyghdl
+          curl --fail --location --retry 3 --output "$pyghdl" "$pyghdl_url"
+          echo "d402d0cf73ecbec89cfe8ee3dd029f87b45ab6c8a99f954506d66d071049e797  $pyghdl" \
+            | sha256sum --check --strict
+
+          pyslang=pyslang-11.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+          pyslang_url=https://files.pythonhosted.org/packages/23/cc/4277ce5f936c892daa6924bd5e89dd25d46385d757d9a1b313f67c833e8f/$pyslang
+          curl --fail --location --retry 3 --output "$pyslang" "$pyslang_url"
+          echo "3557e20a45b5535e24ed2481ab07d2ea136ec6e17e448f846eff38c8bf2dde22  $pyslang" \
+            | sha256sum --check --strict
+
+          python -m pip install "./$pyghdl" "./$pyslang"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Run complete zero-skip test gate
+        run: |
+          set -euxo pipefail
+          python -m pytest -q -ra -p no:cacheprovider \
+            --require-ghdl-integration \
+            --require-slang-integration \
+            --require-semantic-equivalence \
+            --require-systemverilog-equivalence \
+            --basetemp build/pytest-quality
+
+      - name: Run static quality checks
+        run: |
+          set -euxo pipefail
+          python -m ruff check .
+          python -m compileall -q src tests packaging/windows
+          python -m pip check
+          git diff --check
+
+      - name: Require zero VHDL golden diff from v0.1.1
+        run: |
+          set -euxo pipefail
+          git diff --exit-code 7bf9785d29410360979ca56c0563f45d9467d1c2 -- 'tests/golden/m*.v'
   isolated-wheel-smoke:
     name: Isolated wheelhouse smoke
     runs-on: ubuntu-24.04

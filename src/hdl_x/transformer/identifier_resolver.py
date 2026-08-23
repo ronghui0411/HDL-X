@@ -184,8 +184,14 @@ VERILOG_2001_KEYWORDS = frozenset(
 class IdentifierResolver:
     """把源名称确定性映射为合法且唯一的 Verilog-2001 名称。"""
 
-    def __init__(self, style: NameStyle = NameStyle.PRESERVE) -> None:
+    def __init__(
+        self,
+        style: NameStyle = NameStyle.PRESERVE,
+        *,
+        case_sensitive: bool = False,
+    ) -> None:
         self.style = style
+        self.case_sensitive = case_sensitive
         self._source_to_target: dict[str, str] = {}
         self._used_targets: set[str] = set()
 
@@ -196,9 +202,9 @@ class IdentifierResolver:
         return dict(self._source_to_target)
 
     def resolve(self, source_name: str) -> str:
-        """解析单个 VHDL 名称；源名称按大小写不敏感处理。"""
+        """按配置的源语言大小写规则解析名称。"""
 
-        key = source_name.casefold()
+        key = self.key(source_name)
         if key in self._source_to_target:
             return self._source_to_target[key]
 
@@ -215,6 +221,9 @@ class IdentifierResolver:
         """将外部 allocator 已分配的目标名称加入当前碰撞集合。"""
 
         self._used_targets.add(target_name)
+
+    def key(self, source_name: str) -> str:
+        return source_name if self.case_sensitive else source_name.casefold()
 
     def _allocate(self, source_name: str) -> str:
         styled = self._apply_style(source_name)
@@ -251,16 +260,24 @@ class IdentifierResolver:
 class _NameScope:
     """保存一个 lexical scope 内的声明及其父级查找关系。"""
 
-    def __init__(self, style: NameStyle, parent: _NameScope | None = None) -> None:
+    def __init__(
+        self,
+        style: NameStyle,
+        parent: _NameScope | None = None,
+        *,
+        case_sensitive: bool = False,
+    ) -> None:
         self.parent = parent
-        self.resolver = IdentifierResolver(style)
+        self.case_sensitive = case_sensitive
+        self.resolver = IdentifierResolver(style, case_sensitive=case_sensitive)
         self.declarations: dict[str, str] = {}
 
     def declare(self, source_name: str, *, source_span: SourceSpan | None = None) -> str:
-        key = source_name.casefold()
+        key = self.resolver.key(source_name)
         if key in self.declarations:
+            mode = "case-sensitive" if self.case_sensitive else "case-insensitive"
             raise SemanticError(
-                f"duplicate case-insensitive declaration {source_name!r}",
+                f"duplicate {mode} declaration {source_name!r}",
                 code="HDLX-NAME-DUPLICATE",
                 source_span=source_span,
             )
@@ -269,7 +286,7 @@ class _NameScope:
         return generated
 
     def resolve(self, source_name: str) -> str:
-        key = source_name.casefold()
+        key = self.resolver.key(source_name)
         scope: _NameScope | None = self
         while scope is not None:
             if key in scope.declarations:
@@ -285,7 +302,7 @@ class _NameScope:
     ) -> str:
         """解析对象引用；未在当前或父作用域声明时结构化失败。"""
 
-        key = source_name.casefold()
+        key = self.resolver.key(source_name)
         scope: _NameScope | None = self
         while scope is not None:
             if key in scope.declarations:
@@ -306,10 +323,11 @@ class _NameScope:
     ) -> None:
         """绑定由上级 allocator 分配、但在当前 lexical scope 可见的名称。"""
 
-        key = source_name.casefold()
+        key = self.resolver.key(source_name)
         if key in self.declarations:
+            mode = "case-sensitive" if self.case_sensitive else "case-insensitive"
             raise SemanticError(
-                f"duplicate case-insensitive declaration {source_name!r}",
+                f"duplicate {mode} declaration {source_name!r}",
                 code="HDLX-NAME-DUPLICATE",
                 source_span=source_span,
             )
@@ -330,8 +348,14 @@ class _ModuleNames:
 class DesignIdentifierResolver(SemanticLowering):
     """按 VHDL 大小写规则遍历 Design，并生成合法 Verilog 名称。"""
 
-    def __init__(self, style: NameStyle = NameStyle.PRESERVE) -> None:
+    def __init__(
+        self,
+        style: NameStyle = NameStyle.PRESERVE,
+        *,
+        case_sensitive: bool = False,
+    ) -> None:
         self.style = style
+        self.case_sensitive = case_sensitive
         self._mappings: dict[str, str] = {}
         self._external_formal_scopes: dict[tuple[str, str], _NameScope] = {}
 
@@ -347,25 +371,25 @@ class DesignIdentifierResolver(SemanticLowering):
         self._mappings = {}
         self._external_formal_scopes = {}
         resolved = design.model_copy(deep=True)
-        global_scope = _NameScope(self.style)
+        global_scope = _NameScope(self.style, case_sensitive=self.case_sensitive)
         modules: dict[str, _ModuleNames] = {}
 
         for module in resolved.modules:
             original = module.name
             generated = global_scope.declare(original, source_span=module.source_span)
             self._mappings[f"module::{original}"] = generated
-            scope = _NameScope(self.style)
+            scope = _NameScope(self.style, case_sensitive=self.case_sensitive)
             parameters: dict[str, str] = {}
             ports: dict[str, str] = {}
             for parameter in module.parameters:
-                parameters[parameter.name.casefold()] = self._declare(
+                parameters[self._key(parameter.name)] = self._declare(
                     scope,
                     parameter.name,
                     f"{original}::parameter::{parameter.name}",
                     parameter,
                 )
             for port in module.ports:
-                ports[port.name.casefold()] = self._declare(
+                ports[self._key(port.name)] = self._declare(
                     scope,
                     port.name,
                     f"{original}::port::{port.name}",
@@ -386,7 +410,7 @@ class DesignIdentifierResolver(SemanticLowering):
                     variable,
                 )
             self._declare_items(module.items, scope, original)
-            modules[original.casefold()] = _ModuleNames(
+            modules[self._key(original)] = _ModuleNames(
                 module=module,
                 original_name=original,
                 generated_name=generated,
@@ -399,13 +423,16 @@ class DesignIdentifierResolver(SemanticLowering):
             self._rewrite_module(module_names, modules, global_scope)
 
         if resolved.top is not None:
-            top_record = modules.get(resolved.top.casefold())
+            top_record = modules.get(self._key(resolved.top))
             resolved.top = (
                 top_record.generated_name
                 if top_record is not None
                 else global_scope.resolve(resolved.top)
             )
         return resolved
+
+    def _key(self, name: str) -> str:
+        return name if self.case_sensitive else name.casefold()
 
     def _declare(
         self,
@@ -490,7 +517,7 @@ class DesignIdentifierResolver(SemanticLowering):
                 self._rewrite_statements(item.body, scope)
             elif isinstance(item, Instance):
                 original_unit = item.referenced_unit
-                target = modules.get(original_unit.casefold())
+                target = modules.get(self._key(original_unit))
                 item.referenced_unit = (
                     target.generated_name
                     if target is not None
@@ -521,7 +548,11 @@ class DesignIdentifierResolver(SemanticLowering):
                 original_index = item.index_name
                 item.label = scope.resolve(original_label)
                 self._rewrite_range(item.range, scope)
-                child = _NameScope(self.style, scope)
+                child = _NameScope(
+                    self.style,
+                    scope,
+                    case_sensitive=self.case_sensitive,
+                )
                 item.index_name = genvar_resolver.resolve_unique(original_index)
                 child.bind(
                     original_index,
@@ -548,7 +579,11 @@ class DesignIdentifierResolver(SemanticLowering):
                     ("then", item.then_body),
                     ("else", item.else_body),
                 ):
-                    child = _NameScope(self.style, scope)
+                    child = _NameScope(
+                        self.style,
+                        scope,
+                        case_sensitive=self.case_sensitive,
+                    )
                     branch_path = f"{path}::{original_label}::{branch_name}"
                     self._declare_items(branch, child, branch_path)
                     self._rewrite_items(
@@ -569,12 +604,15 @@ class DesignIdentifierResolver(SemanticLowering):
     ) -> str:
         if target is not None:
             mapping = target.parameters if category == "parameter" else target.ports
-            known = mapping.get(formal.casefold())
+            known = mapping.get(self._key(formal))
             if known is not None:
                 return known
             return target.scope.resolve(formal)
         key = (generated_unit, category)
-        scope = self._external_formal_scopes.setdefault(key, _NameScope(self.style))
+        scope = self._external_formal_scopes.setdefault(
+            key,
+            _NameScope(self.style, case_sensitive=self.case_sensitive),
+        )
         return scope.resolve(formal)
 
     def _rewrite_declaration(self, declaration: Signal | Variable, scope: _NameScope) -> None:

@@ -1,20 +1,43 @@
-HDL-X v0.1.1 Third-Party Notices
-================================
+HDL-X 0.2.0-rc1 Third-Party Notices
+===================================
 
 Copyright (c) 2026 rh. HDL-X is licensed under the MIT License; see LICENSE.
 
 This file is a technical inventory, not legal advice. The HDL-X source archive
-and pure Python wheel do not bundle pyGHDL, libghdl, or the other runtime
-dependency wheels listed below. The HDL-X wheel declares dependencies through
-Python package metadata. Each separately installed dependency remains subject
-to its own license, and its wheel contains the corresponding license text.
+and pure Python wheel do not bundle pyGHDL, libghdl, pyslang, Slang, or the
+other runtime dependency wheels listed below. The HDL-X wheel declares
+dependencies through Python package metadata. Each separately installed
+dependency remains subject to its own license, and its wheel contains the
+corresponding license text.
 
-The v0.1.1 release does not include the previously built PyInstaller EXE or its
-embedded Python/pyGHDL/libghdl runtime. EXE distribution is deferred for a
-separate binary-distribution review.
+The 0.2.0-rc1 candidate does not include the previously built PyInstaller EXE
+or its embedded Python/pyGHDL/libghdl runtime. EXE distribution remains
+deferred for a separate binary-distribution review. No v0.2 tag or GitHub
+Release is implied by this candidate inventory.
 
-Primary runtime dependency
---------------------------
+SystemVerilog frontend
+----------------------
+
+pyslang 11.0.0 / Slang
+  SPDX: MIT
+  Project and source:
+    https://github.com/MikePopoloski/slang
+  Python package release:
+    https://pypi.org/project/pyslang/11.0.0/
+  Documentation:
+    https://sv-lang.com/pyslang/
+  License text in the installed wheel:
+    pyslang-11.0.0.dist-info/licenses/LICENSE
+
+The candidate declares pyslang only through the `systemverilog` optional extra
+with an exact `==11.0.0` requirement. The HDL-X wheel does not bundle the
+pyslang wheel or Slang binaries. Users who do not install this extra retain the
+VHDL path; SystemVerilog requests fail explicitly at the frontend boundary.
+The candidate CycloneDX SBOM includes the separately installed pyslang wheel
+and the active-extra dependency relationship.
+
+Primary VHDL runtime dependency
+-------------------------------
 
 pyGHDL 6.0.0 / libghdl
   SPDX: GPL-2.0-or-later
@@ -26,15 +49,15 @@ pyGHDL 6.0.0 / libghdl
     pyghdl-6.0.0.dist-info/licenses/COPYING.md
 
 The official pyGHDL wheel is platform-specific and contains libghdl plus GHDL
-standard/IEEE VHDL resources. It is not part of the HDL-X wheel or attached as
+standard/IEEE VHDL resources. It is not part of the HDL-X wheel or presented as
 an HDL-X-owned release artifact.
 
-Resolved runtime wheelhouse used for the v0.1.1 release smoke test
-------------------------------------------------------------------
+Resolved runtime wheelhouse used for the 0.2.0-rc1 smoke test
+-------------------------------------------------------------
 
 The machine-readable component versions, wheel SHA-256 values, dependency
 relationships, source links, and license identifiers are in SBOM.cdx.json.
-The resolved Windows CPython 3.13 wheelhouse contained:
+The candidate Windows CPython 3.13 wheelhouse contains:
 
   annotated-doc 0.0.5                 MIT
   annotated-types 0.8.0               MIT
@@ -48,6 +71,7 @@ The resolved Windows CPython 3.13 wheelhouse contained:
   pydantic_core 2.46.4                MIT
   pyGHDL 6.0.0                        GPL-2.0-or-later
   Pygments 2.21.0                     BSD-2-Clause
+  pyslang 11.0.0                      MIT
   pyTooling 8.19.0                    Apache-2.0
   pyVHDLModel 0.39.0                  Apache-2.0
   rich 15.0.0                         MIT
@@ -66,11 +90,12 @@ Upstream source and license locations
   Jinja2:             https://github.com/pallets/jinja
   markdown-it-py:     https://github.com/executablebooks/markdown-it-py
   MarkupSafe:         https://github.com/pallets/markupsafe
-  mdurl:              https://github.com/executablebooks/mdurl
+  mdurl:              https://github.com/pallets/mdurl
   pydantic:           https://github.com/pydantic/pydantic
   pydantic_core:      https://github.com/pydantic/pydantic-core
   pyGHDL/libghdl:     https://github.com/ghdl/ghdl
   Pygments:           https://github.com/pygments/pygments
+  pyslang/Slang:      https://github.com/MikePopoloski/slang
   pyTooling:          https://github.com/pyTooling/pyTooling
   pyVHDLModel:        https://github.com/VHDL/pyVHDLModel
   rich:               https://github.com/Textualize/rich
@@ -82,12 +107,12 @@ Upstream source and license locations
 Corresponding source and retention
 ----------------------------------
 
-HDL-X corresponding source is retained in the public GitHub repository and in
-the v0.1.1 GitHub Release source archive:
+HDL-X corresponding source is retained in the public GitHub repository:
 
   https://github.com/ronghui0411/HDL-X
 
-Third-party corresponding source is available from the upstream locations
-listed above. The release SBOM and this notice are attached to the GitHub
-Release and retained in the repository root. No third-party wheel is presented
-as an HDL-X-owned artifact.
+If the candidate is later promoted, the GitHub-generated source archive will
+provide the tagged HDL-X source. Third-party corresponding source remains
+available from the upstream locations listed above. The SBOM and this notice
+are retained in the repository root and are planned as future Release
+attachments. No third-party wheel is presented as an HDL-X-owned artifact.

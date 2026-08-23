@@ -1,13 +1,14 @@
 # HDL-X
 
-HDL-X 是离线、源码到源码的 HDL 转换器。当前 MVP 使用真实 GHDL 语法与语义
-分析，将一个受控的、可综合 VHDL-2008 子集转换为可读的 Verilog-2001，同时保留
-RTL 层次、范围方向、时序语义与常见源码注释。
+HDL-X 是离线、源码到源码的 HDL 转换器。已发布的稳定基线 `v0.1.1` 使用真实 GHDL
+分析 VHDL-2008；当前正式候选 `0.2.0-rc1` 使用真实 Slang 分析受控的可综合
+SystemVerilog 子集。Python/PEP 440 metadata 对应为 `0.2.0rc1`。两条路径都生成可读的
+Verilog-2001，并共享语言无关 Canonical RTL IR 与独立 Verilog lowering/render 阶段。
 
-当前唯一可用路径是 **VHDL → Verilog-2001**。Verilog → VHDL、SystemVerilog
-输入/输出以及完整 VHDL 语言支持均未实现。
+当前可用路径是 **VHDL → Verilog-2001** 和 **SystemVerilog → Verilog-2001
+0.2.0-rc1 MVP**。Verilog → VHDL、SystemVerilog 输出及完整源语言支持均未实现。
 
-## 已支持的 MVP 子集
+## VHDL → Verilog-2001 支持范围
 
 - entity、单一匹配 architecture、`in`/`out`/`inout` port
 - `bit`、`std_logic`、显式范围的 `std_logic_vector`、`signed`、`unsigned`
@@ -27,7 +28,29 @@ RTL 层次、范围方向、时序语义与常见源码注释。
 - 常见 module/port/signal/assignment/process/generate 的 leading/trailing comment
 - 结构化诊断（尽可能携带文件、行、列）
 
-## 明确不支持或保守拒绝
+## SystemVerilog → Verilog-2001 0.2.0-rc1 MVP 支持范围
+
+SystemVerilog 输入必须安装精确的 `pyslang==11.0.0` 可选 frontend。已实现范围：
+
+- 单文件 `module`、ANSI ports、大小写敏感标识符
+- 可覆盖 `parameter`；受限、无环的 integral `localparam` 在 frontend 私有层安全内联
+- `logic`、`reg`、`wire`、单比特与一维 packed vector、signedness 和符号宽度表达式
+- 连续 `assign`
+- `always_comb`、blocking assignment、`if/else`、精确 `case/default`
+- `always_ff`、nonblocking assignment、单一 `posedge`/`negedge` clock
+- 常见同步/异步、active-high/active-low reset
+- named/positional parameter 与 port connection
+- integral literal、索引、切片、拼接、三目和已列入 MVP 的算术/逻辑/比较运算
+- 真实 Slang `SyntaxTree` + `Compilation`、Raw → Canonical、pipeline-owned Verilog
+  lowering、Jinja2 renderer 的完整磁盘 fixture 路径
+- module 边界注释；无法安全关联的内部注释在 strict 中失败，在 best-effort 中明确 warning
+
+`parameter int` 只承诺已知 0/1 integral 常量域。two-state `bit` 和数据对象/port `int`
+不能由 Verilog-2001 four-state 变量精确保留，因此结构化拒绝。完整边界和设计理由见
+[`V0_2_SYSTEMVERILOG_MVP.md`](V0_2_SYSTEMVERILOG_MVP.md)；候选版本的风险与门禁见
+[`V0_2_RELEASE_NOTES.md`](V0_2_RELEASE_NOTES.md)。
+
+## VHDL 明确不支持或保守拒绝
 
 HDL-X 的原则是“不确定就失败”，不会为扩大覆盖率静默省略会改变硬件的构造。
 当前会结构化拒绝的常见项目包括：
@@ -65,6 +88,22 @@ HDL-X 的原则是“不确定就失败”，不会为扩大覆盖率静默省�
   Verilog-2001 parameter；默认值与表达式会保留，但目标侧外部 override 必须自行遵守
   源 VHDL 的合法取值范围
 
+## SystemVerilog 明确不支持或保守拒绝
+
+- `interface`/`modport`、`program`、`package`、`class`、clocking block
+- typedef、struct/union/enum、unpacked/dynamic/associative array、queue、string、real
+- two-state `bit` 数据对象，以及 `int/integer` 数据 port/signal（parameter 除外）
+- task/function、DPI、bind、config、checker、primitive
+- `initial`/`final`、assertion/coverage、randomization、mailbox、semaphore
+- delay/event/wait/fork-join、force/release、file I/O 和 testbench-only construct
+- `always_latch`、普通 `always`、多时钟或复合 event 的 `always_ff`
+- wildcard/implicit/interface port connection、跨文件 include/package/import
+- generate、宏驱动结构变换和多 compilation-unit/project flow
+- 声明初始化、unpacked dimensions、复杂 expression sizing/cast 和无法证明位宽/符号等价
+
+这些构造通过 Slang syntax/semantic 节点或 adapter 产生 `HDLX-SV-*` 结构化错误；
+best-effort 不会跳过任何 RTL/结构节点。
+
 这不是综合网表转换器，也不会展开 generate 或 flatten 实例层次。
 
 ## 综合语义与仿真初态
@@ -83,6 +122,15 @@ IEEE `std_logic` 9-state 类型域。HDL-X v0.1 的主要承诺是声明子集�
 - 有复位时序逻辑只承诺施加有效复位后的状态转移；复位前的 time-zero 初态和
   clock/reset 上的 X/Z edge 行为不在等价承诺内。
 - 源码显式 signal initializer 当前以 `HDLX-VHDL-SIGNAL-INITIALIZER` 拒绝，不会丢弃。
+
+SystemVerilog `logic/reg` 与 Verilog `reg` 都是 four-state，未初始化状态均为 `X`；
+0.2.0-rc1 不把 VHDL 专属初态 warning 套到该路径。two-state `bit/int` 数据对象和显式
+initializer 则直接拒绝。`always_comb` 到 `always @(*)` 返回
+`HDLX-SV-ALWAYS-COMB-TIME-ZERO` warning；clock/reset X/Z transition 返回
+`HDLX-SV-EDGE-XZ` warning。mixed signed/unsigned sizing、跨文件 compilation unit 与
+SystemVerilog generate 分别以 `HDLX-SV-SIGNED-SIZING`、`HDLX-SV-COMPILATION-UNIT`、
+`HDLX-SV-GENERATE` 拒绝；疑似但未命名为 rst/reset 的复位控制返回
+`HDLX-SV-RESET-UNCLASSIFIED` warning 并保留普通 clocked if/else。详细边界见 v0.2 发布说明。
 
 因此用于差分仿真时，测试平台必须先施加受支持的显式复位，或自行排除首次有效赋值
 之前的样本。若应用要求 FPGA power-up value、VHDL `'U'` 传播或完整 9-state 行为，v0.1
@@ -110,6 +158,17 @@ python -m hdl_x.cli.main doctor
 python -m pip install -e ".[dev]"
 ```
 
+启用 0.2.0-rc1 SystemVerilog frontend 时，额外安装精确固定的可选 extra：
+
+```powershell
+python -m pip install -e ".[dev,systemverilog]"
+python -m hdl_x.cli.main doctor
+```
+
+HDL-X wheel 不捆绑 `pyslang`；其 metadata 仅在 `systemverilog` extra 中声明
+`pyslang==11.0.0`。未安装该 extra 时，VHDL 路径仍可用，SystemVerilog 请求以
+`HDLX-SV-FRONTEND-UNAVAILABLE` 明确失败。
+
 缺少 pyGHDL、动态库加载失败或版本不是精确的 6.0.0 时，安装解析、`doctor` 和真实
 GHDL 集成测试都会明确失败。请评估 pyGHDL/libghdl 的
 GPL-2.0-or-later 许可是否符合你的分发方式。独立 GHDL CLI 不是当前 in-process
@@ -122,16 +181,17 @@ HDL-X 自有源码由 `rh` 以 MIT License 发布，版权年份为 2026；完�
 [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES) 与 [`SBOM.cdx.json`](SBOM.cdx.json)。
 这些材料是项目所有者确认后的技术发布记录，不构成法律意见。
 
-v0.1.1 只发布源码和纯 Python wheel，不发布 PyInstaller EXE。两者的依赖边界如下：
+已发布的 v0.1.1 与当前 0.2.0-rc1 候选都只采用源码和纯 Python wheel 边界，不发布
+PyInstaller EXE。候选尚未创建 tag 或 GitHub Release。依赖边界如下：
 
-- `hdl_x-0.1.1-py3-none-any.whl` **不包含** pyGHDL/libghdl；它只在 metadata 中声明
-  `Requires-Dist: pyGHDL==6.0.0`。用户必须先从官方 GHDL release 安装 ABI/平台匹配的
-  wheel。由于该 wheel 不在普通 PyPI，完全离线安装还需要单独准备官方 asset。
+- `hdl_x-0.2.0rc1-py3-none-any.whl` **不包含** pyGHDL/libghdl 或 pyslang/Slang；metadata
+  精确声明核心 `pyGHDL==6.0.0`，并仅在 `systemverilog` extra 声明
+  `pyslang==11.0.0`。完全离线安装需要单独准备两个 ABI/平台匹配的官方 wheel。
 - `packaging/windows/hdl_x_gui.spec` 会收集 pyGHDL metadata、DLL、标准/IEEE 库，因此
-  EXE 是与纯 wheel 不同的二进制分发边界。现有 `dist\HDL-X` 不属于 v0.1.1 Release，
+  EXE 是与纯 wheel 不同的二进制分发边界。现有 `dist\HDL-X` 不属于 0.2.0-rc1 候选，
   不上传其目录或 ZIP；未来发布前须单独复核第三方材料、对应源码和代码签名策略。
 
-三种分发边界和 v0.1.1 的所有者决定详见
+三种分发边界和项目所有者决定详见
 [`LICENSE_DISTRIBUTION_OPTIONS.md`](LICENSE_DISTRIBUTION_OPTIONS.md)。概要如下：
 
 1. 源码发布：准备项目 LICENSE、NOTICE/第三方清单、完整源码与构建/测试材料；不包含
@@ -141,8 +201,9 @@ v0.1.1 只发布源码和纯 Python wheel，不发布 PyInstaller EXE。两者�
 3. PyInstaller EXE：再补全部内置组件许可证、NOTICE/SBOM、精确构建源码与经所有者确认
    所需的对应源码获取材料；这是与纯 wheel 不同且更复杂的分发边界。
 
-v0.1.1 采用前两种方式并暂缓第三种。GitHub Release 同时附带 CycloneDX SBOM、
-`THIRD_PARTY_NOTICES` 和 SHA-256 清单；不要求 wheel/源码签名。
+0.2.0-rc1 候选继续采用前两种方式并暂缓第三种。候选 CycloneDX SBOM、
+`THIRD_PARTY_NOTICES` 和 SHA-256 清单已准备；只有远端门禁通过并获得后续发布授权时才会
+作为 Release 附件，不要求 wheel/源码签名。
 
 ## CLI
 
@@ -154,6 +215,12 @@ python -m hdl_x.cli.main convert input.vhd --from vhdl --to verilog -o output.v 
 
 ```powershell
 hdl-x convert input.vhd --from vhdl --to verilog -o output.v --strict
+```
+
+SystemVerilog v0.2 MVP：
+
+```powershell
+hdl-x convert input.sv --from systemverilog --to verilog -o output.v --strict
 ```
 
 常用选项：
@@ -174,12 +241,16 @@ hdl-x convert input.vhd --from vhdl --to verilog -o output.v --strict
 python -m hdl_x.cli.main doctor
 ```
 
-`doctor` 将 in-process pyGHDL/libghdl 标为 required，并单独报告 GHDL CLI、slang、
-Yosys 等 optional 工具。optional 工具缺失不会令 doctor 失败。
+`doctor` 将 in-process pyGHDL/libghdl 标为 required，单独报告可选
+`pyslang==11.0.0` frontend，以及 GHDL CLI、slang、Yosys 等外部工具。
+未安装 pyslang 不影响 VHDL doctor 结果，但不能执行 SystemVerilog 转换。
 
 ## 桌面 GUI
 
 项目提供基于 Python 标准库 Tkinter 的原生桌面界面，不增加额外 GUI 运行时依赖。
+当前 GUI 仍只暴露稳定的 VHDL → Verilog 路径；SystemVerilog v0.2 MVP 通过 CLI 与
+Python API 使用，避免在没有对应交互/诊断回归前扩大 GUI 声明。
+
 安装项目与 pyGHDL 后，可运行：
 
 ```powershell
@@ -222,6 +293,17 @@ result = convert_file(
 Path("output.v").write_text(result.text, encoding="utf-8")
 ```
 
+SystemVerilog API 只需显式选择源语言：
+
+```python
+result = convert_file(
+    Path("input.sv"),
+    source_language="systemverilog",
+    target_language="verilog",
+    options=ConversionOptions(strict=True, validate=False),
+)
+```
+
 使用默认内置 generator 时，`result.design` 是已经过名称与 driver semantic lowering
 的语言中立 canonical IR；传入自定义 generator 时，该 generator 通过自身公共契约负责
 lowering，`result.design` 保留 frontend 产出的 canonical design。
@@ -245,25 +327,40 @@ python -m ruff check .
 python -m compileall -q src tests
 ```
 
+真实 SystemVerilog frontend 回归单独强制：
+
+```powershell
+python -m pytest tests/integration -m slang_integration -q -ra --require-slang-integration
+```
+
 `--require-ghdl-integration` 保证至少选择了一项真实 GHDL 测试；被选择的测试在
 pyGHDL 缺失、版本错误或无法加载时会在 collection 阶段失败，不允许用 skip 伪装为
 完整通过。报告末尾同时给出 selected/executed/passed/failed/skipped 数量。真实
-integration/golden 测试调用 pyGHDL/libghdl，不是 fixture-specific 字符串 parser。
-slang 与 Yosys 是可选外部验证器；不可用时测试与 `doctor` 会明确记录。
+integration/golden 测试调用 pyGHDL/libghdl，不是 fixture-specific 字符串 parser；
+`--require-slang-integration` 对 pyslang 路径执行同样的零伪装门禁。
 
 行为等价测试使用独立的 GHDL CLI 与 Icarus (`iverilog` + `vvp`) 分别运行 VHDL 和
 生成的 Verilog，再逐项比较 `HDLX-TRACE`。当前包含 32 组确定性伪随机组合向量，以及
 clock/reset/enable 时序轨迹：
 
 ```powershell
-python -m pytest tests/equivalence -q -ra
-python -m pytest tests/equivalence -q -ra --require-semantic-equivalence
+python -m pytest tests/equivalence/test_differential_simulation.py -q -ra
+python -m pytest tests/equivalence/test_differential_simulation.py -q -ra --require-semantic-equivalence
 ```
 
-第一条命令在工具缺失时明确列出 skip 原因，terminal summary 会显示执行数、skip 数和
-缺少的程序；第二条是具备完整工具链的 CI/release gate，缺少工具或没有选择等价测试时
-直接失败。`Verilator`、`Yosys` 与 `sby` 也会被能力探测记录，但 v0.1 的已实现差分后端
-是 GHDL+Icarus。本机若缺少 GHDL CLI/Icarus，这些行为测试必须报告 skipped，不能写成
+SystemVerilog v0.2 另有两项 Verilog-2001 编译检查和两项组合/clock-reset-enable
+差分仿真。原始 `.sv` 以 Icarus `-g2012` 运行，生成 `.v` 以 `-g2001` 运行：
+
+```powershell
+python -m pytest tests/equivalence/test_systemverilog_differential.py -q -ra
+python -m pytest tests/equivalence/test_systemverilog_differential.py -q -ra --require-slang-integration --require-systemverilog-equivalence
+```
+
+上述两组命令中，各自第一条是普通开发入口：工具缺失时明确列出 skip 原因，terminal
+summary 会显示执行数、skip 数和缺少的程序；各自第二条是具备完整工具链的 CI/release
+gate，缺少工具或没有选择对应等价测试时直接失败。`Verilator`、`Yosys` 与 `sby` 也会被
+能力探测记录，但当前已实现的差分后端是 VHDL 的 GHDL+Icarus 和 SystemVerilog 的
+Icarus `-g2012`/`-g2001` 双路径。本机缺少这些工具时必须报告 skipped，不能写成
 “已完成等价验证”。
 
 Windows 本地可从 [GHDL 6.0.0 官方 release](https://github.com/ghdl/ghdl/releases/tag/v6.0.0)
@@ -283,6 +380,17 @@ CI 建议使用 Ubuntu 24.04：以官方 `ghdl/setup-ghdl@v1` 固定 GHDL `6.0.0
 仓库的 `.github/workflows/release-gates.yml` 已将 checkout、Python setup 和 GHDL setup
 固定到审核过的完整 commit SHA。semantic-equivalence job 还会校验 Linux CPython 3.13
 官方 pyGHDL wheel 的 SHA-256，并对终端汇总强制要求 `passed=2, failed=0, skipped=0`。
+独立 `systemverilog-mvp` job 固定 `pyslang==11.0.0` Linux wheel URL 与 SHA-256，
+安装 Icarus/VVP；它先强制全部真实 Slang frontend integration 为
+`30/30 passed, 0 skipped`，再强制两项 Verilog-2001 编译和两项差分场景为
+`4/4 passed, 0 skipped`。本地无 Icarus/VVP 时这些等价测试会明确 skip；只有远端 job
+实际运行成功后才能声称该差分门禁通过。
+
+0.2.0-rc1 的逐项门禁见 [`V0_2_RELEASE_CHECKLIST.md`](V0_2_RELEASE_CHECKLIST.md)。仓库
+`SBOM.cdx.json` 已从候选隔离 wheelhouse 重新生成，包含 `hdl-x==0.2.0rc1`、
+`pyGHDL==6.0.0`、`pyslang==11.0.0` 及 active `systemverilog` extra 的依赖关系；同时核对
+[`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES)。
+
 完全隔离 wheel smoke 可在 CI 或本地运行：
 
 ```powershell
@@ -290,8 +398,9 @@ python scripts/release_wheel_smoke.py --workspace <new-empty-directory>
 ```
 
 脚本创建 `system_site_packages=False` 的新 venv，以完整 wheelhouse 和 `--no-index`
-安装，运行 CLI、doctor、真实转换和 golden 字节比较，并输出 HDL-X wheel、pyGHDL wheel、
-生成文件与 golden 的 SHA-256。工作目录已存在时脚本会拒绝覆盖。
+安装 `hdl-x[systemverilog]`，运行 CLI、doctor、真实 VHDL/SystemVerilog 转换和 golden 字节
+比较，并输出 HDL-X、pyGHDL、pyslang wheel 及两条生成路径的 SHA-256。工作目录已存在时
+脚本会拒绝覆盖。
 
 `slang`/Verilator 对生成 Verilog 的解析、Yosys synthesis smoke 和 Vivado `xvlog`
 只能证明目标源码可被相应工具接受；它们不能单独证明与 VHDL 行为等价。Yosys miter 或
@@ -301,17 +410,19 @@ SymbiYosys 等价检查只有在源/目标双方都具备可信语义模型时�
 ## 架构
 
 ```text
-VHDL source
-  → PyGhdlBackend（真实 GHDL parse + semantic，立即隔离到私有 Raw IR）
-  → VhdlAdapter（Raw IR → language-neutral canonical RTL IR）
+VHDL source → PyGhdlBackend → Raw VHDL IR → VhdlAdapter
+SystemVerilog source → PySlangBackend（SyntaxTree + Compilation）
+                     → pure-Python Raw SystemVerilog IR → SystemVerilogAdapter
+  → language-neutral canonical RTL IR
   → pipeline-owned VerilogLowering（identifier / driver / storage 决策）
-  → VerilogRenderIR（已完成目标 lowering）
+  → VerilogRenderIR（名称、driver、过程赋值操作符均已完成目标 lowering）
   → VerilogRenderer（仅执行 Jinja2 Verilog-2001 rendering）
   → optional slang / Yosys validation
 ```
 
-canonical IR 不依赖 pyGHDL、IIR 或 VHDL AST 类型。模板只负责布局；名称、driver、
-赋值、复位、generate 安全性等判断在 Python lowering 中完成。所有输入先在隔离 arena
+canonical IR 不依赖 pyGHDL、pyslang、IIR 或任何 frontend AST 类型。模板只负责布局；
+名称、driver 和目标赋值操作符在 Verilog lowering 中完成；edge/reset 等源语义在
+frontend adapter 规范化为语言无关节点。VHDL 输入先在隔离 arena
 执行完整 libghdl semantic pass；这避免把 pyGHDL DOM 的依赖分析误当成 VHDL 名称、
 类型与静态性检查。由于 pyGHDL 6.0.0 与当前 pyVHDLModel 的 generate/association DOM
 存在 API 漂移，包含 generate 的输入会再重置 arena，并从未被 semantic 改写的低层
@@ -327,9 +438,10 @@ v0.1 兼容 facade，输出与新路径逐字一致。
 为避免破坏现有 Python 调用方和保存的 canonical JSON，v0.1 继续保留
 `AssignmentKind.BLOCKING/NON_BLOCKING`、`DriverKind.CONTINUOUS/PROCEDURAL`、
 `ProceduralAssignment.assignment_kind` 以及 declaration `driver_kind` 字段；相关 JSON
-schema 已标记 deprecated，实例 JSON 结构不变。它们不是长期 canonical 设计方向。
-v0.2 才会在独立迁移计划、兼容读取器和版本化 schema 就绪后考虑删除；v0.1 不会静默
-改变 `ConversionResult.design` 的节点类型。
+schema 已标记 deprecated，实例 JSON 结构不变。v0.2 SystemVerilog MVP 继续保留这些
+字段作为兼容载体，但实际 `=`/`<=` 决策保存在 `VerilogRenderIR`，renderer 不从
+Canonical 字段重新推导目标操作符。删除兼容字段只会在未来独立迁移计划、兼容读取器
+和版本化 schema 就绪后考虑；v0.2 不改变 `ConversionResult.design` 的公开节点类型。
 
 ### Source location 坐标约定
 

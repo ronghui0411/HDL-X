@@ -12,10 +12,14 @@ from hdl_x.diagnostics import (
     UnsupportedConstructError,
     ValidationError,
 )
-from hdl_x.frontend.vhdl import VhdlFrontend
+from hdl_x.frontend import SystemVerilogFrontend, VhdlFrontend
 from hdl_x.generator import VerilogGenerator, VerilogLowering, VerilogRenderer
 from hdl_x.ir import Comment, Design
-from hdl_x.transformer import NameStyle, SemanticBoundaryAnalysis
+from hdl_x.transformer import (
+    NameStyle,
+    SemanticBoundaryAnalysis,
+    SystemVerilogSemanticBoundaryAnalysis,
+)
 from hdl_x.validator import SlangValidator, ValidationStatus, YosysValidator
 
 
@@ -49,26 +53,37 @@ def convert_file(
     source_language: str = "vhdl",
     target_language: str = "verilog",
     options: ConversionOptions | None = None,
-    frontend: VhdlFrontend | None = None,
+    frontend: VhdlFrontend | SystemVerilogFrontend | None = None,
     generator: VerilogGenerator | None = None,
 ) -> ConversionResult:
-    """执行当前声明支持的真实 VHDL → Verilog-2001 pipeline。"""
+    """执行已声明支持的真实 frontend → Verilog-2001 pipeline。"""
 
     normalized_source = source_language.casefold()
     normalized_target = target_language.casefold()
-    if normalized_source != "vhdl" or normalized_target != "verilog":
+    supported_sources = {"vhdl", "systemverilog", "sv"}
+    if normalized_source not in supported_sources or normalized_target != "verilog":
         raise UnsupportedConstructError(
             f"当前 MVP 不支持 {source_language} → {target_language}；"
-            "仅支持 vhdl → verilog。",
+            "支持 vhdl/systemverilog → verilog。",
             code="HDLX-CONVERSION-PATH",
         )
 
     active_options = options or ConversionOptions()
-    active_frontend = frontend or VhdlFrontend()
+    active_frontend = frontend or (
+        VhdlFrontend() if normalized_source == "vhdl" else SystemVerilogFrontend()
+    )
     design = active_frontend.parse_design(Path(source_path))
-    diagnostics: list[Diagnostic] = list(SemanticBoundaryAnalysis().analyze(design))
+    boundary_analysis = (
+        SemanticBoundaryAnalysis()
+        if normalized_source == "vhdl"
+        else SystemVerilogSemanticBoundaryAnalysis()
+    )
+    diagnostics: list[Diagnostic] = list(boundary_analysis.analyze(design))
     if generator is None:
-        render_ir = VerilogLowering(name_style=active_options.name_style).lower(design)
+        render_ir = VerilogLowering(
+            name_style=active_options.name_style,
+            source_case_sensitive=normalized_source != "vhdl",
+        ).lower(design)
         text = VerilogRenderer().render(render_ir)
         lowered_design = render_ir.design
     else:

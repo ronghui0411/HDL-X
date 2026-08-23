@@ -1954,3 +1954,68 @@ correct readable target RTL
 The goal is not maximum syntax coverage.
 
 The goal is a trustworthy, extensible translation architecture with a working VHDL → Verilog MVP.
+
+---
+
+# 15. v0.2 SystemVerilog → Verilog-2001 MVP
+
+本节由项目所有者在 v0.1.1 发布后明确授权，覆盖前述“未经新请求不启动 SystemVerilog”
+的历史停止条件。v0.1.1 仍是兼容基线；详细语义边界见
+`V0_2_SYSTEMVERILOG_MVP.md`，发布门禁见 `V0_2_RELEASE_CHECKLIST.md`。
+
+## 15.1 目标与不变量
+
+实现真实 Slang 驱动的、单文件可综合 SystemVerilog 子集到 Verilog-2001 的端到端路径。
+必须同时保持：
+
+- 现有 VHDL → Verilog-2001 行为和已跟踪 golden 逐字不变；
+- 公开 Python API、`ConversionResult.design` 节点类型和 Canonical JSON 结构不变；
+- Slang 类型不越过 frontend 私有边界；
+- pipeline 拥有 Verilog lowering，renderer 只渲染 target render IR；
+- unsupported 或语义无法证明安全的输入结构化失败，不扩大 best-effort 的 RTL 省略范围。
+
+## 15.2 实施切片
+
+1. **设计与基线 — completed**
+   - 冻结 `v0.1.1` / `7bf9785` 基线、前端选择、支持矩阵、API 兼容和停止条件。
+2. **真实前端与 Raw IR — completed**
+   - 精确固定可选 `pyslang==11.0.0`；实际调用 `SyntaxTree` + `Compilation`。
+   - 在 `parser/slang` 内复制为纯 Python Raw IR，再由 `SystemVerilogAdapter` 规范化。
+3. **Canonical 与目标 lowering — completed**
+   - 复用现有语言无关节点，不增加 Canonical JSON 字段。
+   - 大小写敏感名称策略、driver/storage 和 `=`/`<=` 目标操作符在 Verilog lowering 完成。
+4. **支持面与结构化诊断 — completed**
+   - 覆盖 module/ANSI ports、parameter/localparam、logic/wire/reg、packed vector、assign、
+     always_comb/always_ff、if/case、edge/reset、实例连接和符号宽度。
+   - 明确拒绝 interface/class/package/clocking、复杂类型、testbench-only 和不安全语义。
+5. **验证基础设施 — completed locally, external execution pending**
+   - 真实 `.sv` fixture 贯穿 Slang → Raw → Canonical → lowering → renderer → golden。
+   - 新增两个 Verilog-2001 编译场景及两个组合/clock-reset-enable 差分场景。
+   - 本地缺失 Icarus/VVP 时普通入口明确 skip；强制入口非零失败。
+   - Ubuntu 24.04 CI 固定 actions、pyslang wheel URL/SHA-256，先要求完整 Slang frontend
+     30 passed、0 skipped，再要求编译/差分 4 passed、0 skipped；workflow 未经实际远端
+     成功运行前不得声称等价门禁通过。
+6. **完整验收 — completed locally; external equivalence pending**
+   - 真实 Slang integration 30/30、真实 GHDL integration 129/129，均零跳过。
+   - 完整回归 311 passed、6 skipped；六项只因本机缺少 GHDL CLI/Icarus/VVP。
+   - Ruff、compileall、`pip check`、`git diff --check`、VHDL golden 审计和 wheel 内容检查通过。
+   - Vivado 2023.2 `xvlog/xelab/xsim` 补充验证通过：组合 32/32 和 clock/reset/enable
+     时序 6/6 源/目标 traces 逐项一致。Icarus pytest 4/4 零跳过与远端 CI 仍是未来
+     v0.2 发布门禁，不能用该补充结果改写其 skipped 状态。
+
+## 15.3 依赖与发布策略
+
+- `pyslang` 是 `systemverilog` optional extra，不进入核心安装路径，也不捆绑进 HDL-X wheel。
+- v0.1.1 的 `SBOM.cdx.json` 是历史发布快照；v0.2 发布前必须按最终 wheelhouse 重建。
+- v0.2 MVP 不扩展 GUI 或 PyInstaller EXE，不自动下载外部 simulator。
+- 当前工作只生成可审查的未提交修改；没有项目所有者的新授权时，不 commit、push、tag
+  或创建 GitHub Release。
+
+## 15.4 关键风险
+
+- `always_comb` 的 time-zero 调度不能由 Verilog `always @(*)` 完整表达。
+- reset 分类需要受控语法形态与命名约定；未命中时只能保留普通 clocked if/else。
+- SystemVerilog expression sizing、signedness、two-state 类型及 compilation-unit 规则比现有
+  Canonical IR 更丰富；超出可证明子集必须拒绝。
+- 本机无 Icarus/VVP 时无法提供真实差分通过证据；只能验证 skip/强制失败门禁正确。
+- 删除 deprecated Canonical 字段不是本计划内容，必须另行版本化迁移。

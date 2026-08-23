@@ -16,6 +16,8 @@ class SourceLanguage(str, Enum):
     """当前声明支持的输入语言。"""
 
     VHDL = "vhdl"
+    SYSTEMVERILOG = "systemverilog"
+    SV = "sv"
 
 
 class TargetLanguage(str, Enum):
@@ -87,7 +89,7 @@ def convert(
         typer.Option("--verbose", "-v", help="显示转换阶段信息。"),
     ] = False,
 ) -> None:
-    """将受支持的 VHDL 子集转换为 Verilog-2001。"""
+    """将受支持的 VHDL/SystemVerilog 子集转换为 Verilog-2001。"""
 
     if strict and best_effort:
         raise typer.BadParameter("--strict 与 --best-effort 不能同时启用")

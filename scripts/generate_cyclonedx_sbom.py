@@ -132,22 +132,36 @@ def _vendored_click_component(typer_wheel: Path, typer_version: str) -> dict[str
     }
 
 
-def _dependency_refs(metadata: Any, available: dict[str, str]) -> list[str]:
+def _dependency_refs(
+    metadata: Any,
+    available: dict[str, str],
+    extras: tuple[str, ...],
+) -> list[str]:
     references: set[str] = set()
     for raw_requirement in metadata.get_all("Requires-Dist", []):
         try:
             requirement = Requirement(raw_requirement)
         except Exception:
             continue
-        if requirement.marker is not None and not requirement.marker.evaluate({"extra": ""}):
-            continue
+        if requirement.marker is not None:
+            marker_extras = ("", *extras)
+            if not any(requirement.marker.evaluate({"extra": extra}) for extra in marker_extras):
+                continue
         normalized = canonicalize_name(requirement.name)
         if normalized in available:
             references.add(available[normalized])
     return sorted(references)
 
 
-def generate_sbom(wheelhouse: Path, output: Path, timestamp: str) -> None:
+def generate_sbom(
+    wheelhouse: Path,
+    output: Path,
+    timestamp: str,
+    *,
+    release: str,
+    scope: str,
+    extras: tuple[str, ...],
+) -> None:
     wheels = sorted(wheelhouse.glob("*.whl"))
     if not wheels:
         raise RuntimeError(f"wheelhouse 中没有 wheel: {wheelhouse}")
@@ -168,6 +182,10 @@ def generate_sbom(wheelhouse: Path, output: Path, timestamp: str) -> None:
     project = by_name.get("hdl-x")
     if project is None:
         raise RuntimeError("wheelhouse 中没有 HDL-X wheel")
+    if "systemverilog" in extras and "pyslang" not in by_name:
+        raise RuntimeError(
+            "systemverilog extra 的 SBOM wheelhouse 缺少精确 pyslang wheel"
+        )
 
     available = {name: component["bom-ref"] for name, component in by_name.items()}
     vendored_click = next(
@@ -176,7 +194,7 @@ def generate_sbom(wheelhouse: Path, output: Path, timestamp: str) -> None:
     dependencies = []
     for _, metadata in records:
         reference = available[canonicalize_name(metadata["Name"])]
-        dependency_references = _dependency_refs(metadata, available)
+        dependency_references = _dependency_refs(metadata, available, extras)
         if canonicalize_name(metadata["Name"]) == "typer" and vendored_click is not None:
             dependency_references.append(vendored_click["bom-ref"])
         dependencies.append({"ref": reference, "dependsOn": sorted(dependency_references)})
@@ -190,9 +208,9 @@ def generate_sbom(wheelhouse: Path, output: Path, timestamp: str) -> None:
     serial = uuid.uuid5(uuid.NAMESPACE_URL, f"https://github.com/ronghui0411/HDL-X\n{fingerprints}")
     project["properties"].extend(
         [
-            {"name": "hdl-x:release", "value": "v0.1.1"},
+            {"name": "hdl-x:release", "value": f"v{release}"},
             {"name": "hdl-x:contains-pyghdl", "value": "false"},
-            {"name": "hdl-x:sbom-scope", "value": "Windows CPython 3.13 release wheelhouse"},
+            {"name": "hdl-x:sbom-scope", "value": scope},
         ]
     )
 
@@ -208,6 +226,10 @@ def generate_sbom(wheelhouse: Path, output: Path, timestamp: str) -> None:
             "properties": [
                 {"name": "hdl-x:pyghdl-bundled-in-project-wheel", "value": "false"},
                 {"name": "hdl-x:pyinstaller-exe-released", "value": "false"},
+                {
+                    "name": "hdl-x:active-extras",
+                    "value": ",".join(sorted(extras)) or "none",
+                },
             ],
         },
         "components": sorted(
@@ -224,10 +246,20 @@ def main() -> None:
     parser.add_argument("--wheelhouse", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("SBOM.cdx.json"))
     parser.add_argument("--timestamp", required=True)
+    parser.add_argument("--release", required=True)
+    parser.add_argument("--scope", required=True)
+    parser.add_argument("--extra", action="append", default=[])
     arguments = parser.parse_args()
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", arguments.timestamp):
         raise SystemExit("--timestamp 必须使用 UTC YYYY-MM-DDTHH:MM:SSZ 格式")
-    generate_sbom(arguments.wheelhouse.resolve(), arguments.output.resolve(), arguments.timestamp)
+    generate_sbom(
+        arguments.wheelhouse.resolve(),
+        arguments.output.resolve(),
+        arguments.timestamp,
+        release=arguments.release,
+        scope=arguments.scope,
+        extras=tuple(arguments.extra),
+    )
 
 
 if __name__ == "__main__":
