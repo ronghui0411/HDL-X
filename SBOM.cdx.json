@@ -2,19 +2,19 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:8eeb1c6f-97b4-5e08-992a-e3f3d0171050",
+  "serialNumber": "urn:uuid:f0524490-13b0-5b8b-a6a0-f4154ed7a5e8",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-08-23T12:02:44Z",
+    "timestamp": "2026-08-23T13:39:52Z",
     "component": {
       "type": "application",
-      "bom-ref": "pkg:pypi/hdl-x@0.2.0rc1",
+      "bom-ref": "pkg:pypi/hdl-x@0.2.0",
       "name": "hdl-x",
-      "version": "0.2.0rc1",
+      "version": "0.2.0",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "062db304cebcfc07b95dbc0ba85c734c37d0edaa63bbf5c818262d5202388197"
+          "content": "834c447b3bc95bf256072f03c924a375c89ff3443aaebb80ad0c8a7ac1f1d5dc"
         }
       ],
       "licenses": [
@@ -22,11 +22,11 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:pypi/hdl-x@0.2.0rc1",
+      "purl": "pkg:pypi/hdl-x@0.2.0",
       "properties": [
         {
           "name": "hdl-x:wheel-file",
-          "value": "hdl_x-0.2.0rc1-py3-none-any.whl"
+          "value": "hdl_x-0.2.0-py3-none-any.whl"
         },
         {
           "name": "hdl-x:distribution-boundary",
@@ -34,7 +34,7 @@
         },
         {
           "name": "hdl-x:release",
-          "value": "v0.2.0-rc1"
+          "value": "v0.2.0"
         },
         {
           "name": "hdl-x:contains-pyghdl",
@@ -42,7 +42,7 @@
         },
         {
           "name": "hdl-x:sbom-scope",
-          "value": "Windows CPython 3.13 0.2.0-rc1 wheelhouse with systemverilog extra"
+          "value": "Windows CPython 3.13 0.2.0 wheelhouse with systemverilog extra"
         }
       ],
       "externalReferences": [
@@ -934,7 +934,7 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:pypi/hdl-x@0.2.0rc1",
+      "ref": "pkg:pypi/hdl-x@0.2.0",
       "dependsOn": [
         "pkg:pypi/jinja2@3.1.6",
         "pkg:pypi/pydantic@2.13.4",

@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 _PYGHDL_VERSION = "6.0.0"
 _PYSLANG_VERSION = "11.0.0"
-_PROJECT_VERSION = "0.2.0rc1"
+_PROJECT_VERSION = "0.2.0"
 _PYGHDL_ASSETS = {
     ("linux", "x86_64", (3, 13)): (
         "pyghdl-6.0.0-cp313-cp313-linux_x86_64.whl",

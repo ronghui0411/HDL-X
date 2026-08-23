@@ -24,7 +24,6 @@ from hdl_x.ir import (
     Concatenation,
     ContinuousAssignment,
     Design,
-    DriverKind,
     EdgeKind,
     ForGenerate,
     ForStatement,
@@ -44,7 +43,6 @@ from hdl_x.ir import (
     ParameterBinding,
     Port,
     PortBinding,
-    PortDirection,
     ProceduralAssignment,
     RangeDirection,
     ResetKind,
@@ -63,7 +61,11 @@ from hdl_x.transformer.identifier_resolver import NameStyle
 from hdl_x.transformer.type_lowering import DriverAnalysis
 
 from .base import Generator
-from .verilog_ir import VerilogAssignmentOperator, VerilogRenderIR
+from .verilog_ir import (
+    VerilogAssignmentOperator,
+    VerilogRenderIR,
+    VerilogStorageKind,
+)
 from .verilog_lowering import VerilogLowering
 
 _UNARY_OPERATORS: dict[UnaryOperator, str] = {
@@ -125,6 +127,7 @@ class VerilogRenderer:
         self._item_template = self._environment.get_template("item.j2")
         self._statement_template = self._environment.get_template("statement.j2")
         self._indent = indent
+        self._storage_kinds: Mapping[int, VerilogStorageKind] = {}
         self._assignment_operators: Mapping[int, VerilogAssignmentOperator] = {}
 
     def render(self, render_ir: VerilogRenderIR) -> str:
@@ -133,7 +136,9 @@ class VerilogRenderer:
         if not isinstance(render_ir, VerilogRenderIR):
             raise TypeError("VerilogRenderer.render requires VerilogRenderIR")
         lowered = render_ir.design
+        previous_storage_kinds = self._storage_kinds
         previous_operators = self._assignment_operators
+        self._storage_kinds = render_ir.storage_kinds
         self._assignment_operators = render_ir.assignment_operators
         try:
             modules = [self._render_module(module) for module in lowered.modules]
@@ -144,6 +149,7 @@ class VerilogRenderer:
                 text += "\n" + "\n".join(self._render_comment_group(lowered.trailing_comments))
             return self._normalize_output(text)
         finally:
+            self._storage_kinds = previous_storage_kinds
             self._assignment_operators = previous_operators
 
     def _render_module(self, module: Module) -> str:
@@ -224,12 +230,11 @@ class VerilogRenderer:
                 source_span=port.source_span,
             )
 
-        if port.direction in (PortDirection.INPUT, PortDirection.INOUT):
-            storage = "wire"
-        else:
-            storage = "reg" if port.driver_kind is DriverKind.PROCEDURAL else "wire"
+        storage = self._storage_kind(port)
         suffix = self._render_packed_type(port.rtl_type)
-        return " ".join(part for part in (direction, storage, suffix, port.name) if part)
+        return " ".join(
+            part for part in (direction, storage.value, suffix, port.name) if part
+        )
 
     def _render_declaration(self, declaration: Signal | Variable, level: int) -> str:
         if declaration.initial_value is not None:
@@ -238,21 +243,27 @@ class VerilogRenderer:
                 code="HDLX-GEN-DECLARATION-INITIALIZER",
                 source_span=declaration.source_span,
             )
-        if isinstance(declaration.rtl_type, IntegerType):
+        storage = self._storage_kind(declaration)
+        if storage is VerilogStorageKind.INTEGER:
             core = f"{self._indent * level}integer {declaration.name};"
         else:
-            storage = (
-                "reg"
-                if isinstance(declaration, Variable)
-                else ("reg" if declaration.driver_kind is DriverKind.PROCEDURAL else "wire")
-            )
             suffix = self._render_packed_type(declaration.rtl_type)
-            pieces = [storage]
+            pieces = [storage.value]
             if suffix:
                 pieces.append(suffix)
             pieces.append(declaration.name)
             core = f"{self._indent * level}{' '.join(pieces)};"
         return self._wrap_comments(declaration, core, level)
+
+    def _storage_kind(self, declaration: Port | Signal | Variable) -> VerilogStorageKind:
+        storage = self._storage_kinds.get(id(declaration))
+        if storage is None:
+            raise GenerationError(
+                "Verilog render IR 缺少声明存储类别；必须先执行 Verilog lowering",
+                code="HDLX-GEN-LOWERING-INCOMPLETE",
+                source_span=declaration.source_span,
+            )
+        return storage
 
     def _render_parameter_type(self, rtl_type: object) -> str:
         if isinstance(rtl_type, IntegerType):

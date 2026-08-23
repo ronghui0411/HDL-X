@@ -33,8 +33,8 @@ VHDL → Verilog-2001 输出、公开 Canonical IR 节点、Canonical JSON 结�
 - 可覆盖 `parameter`；
 - 纯 integral、无环 `localparam`，在进入 Canonical IR 前安全内联；
 - `logic`、`reg`、`wire`、单比特和一维 packed vector，保留 signedness、four-state
-  和范围方向；two-state `bit` 与数据对象 `int` 明确拒绝，`int/integer` 只允许用于
-  受限参数；
+  和范围方向；two-state `bit` 与数据对象 `int` 明确拒绝，signed `int/integer` 只允许用于
+  受限参数；unsigned integer parameter 在当前 Canonical/Verilog-2001 sizing 边界下拒绝；
 - 连续 `assign`；
 - `always_comb`，过程内 blocking assignment、`if/else` 和精确 `case/default`；
 - `always_ff`，单一 `posedge`/`negedge` clock；
@@ -59,8 +59,8 @@ VHDL → Verilog-2001 输出、公开 Canonical IR 节点、Canonical JSON 结�
 - `initial`、`final`、assertion/coverage、randomization、mailbox、semaphore、process control；
 - delay/event/wait/fork-join、force/release、file I/O 和其他 testbench-only construct；
 - `always_latch`、普通 `always`、多事件或语义不明确的 `always_ff`；
-- wildcard/implicit port connection、interface port、跨文件 include/package/import；
-- generate、宏驱动结构变换和多 compilation-unit flow（首个切片暂不声明支持）。
+- wildcard/implicit port connection、interface port、任何 include（含 macro-only `.svh`）、package/import；
+- 显式/隐式 generate（含局部信号）、宏驱动结构变换和多 compilation-unit flow。
 
 best-effort 不得跳过上述 RTL/结构节点。安全的注释省略可以 warning；任何可能改变硬件的
 省略仍失败。
@@ -78,9 +78,10 @@ best-effort 不得跳过上述 RTL/结构节点。安全的注释省略可以 wa
 v0.1 兼容字段 `AssignmentKind`、`DriverKind` 及其 JSON 继续存在，但对新路径只是
 deprecated 兼容载体。SystemVerilog adapter 只记录源过程赋值的 scheduling 语义，
 不决定目标 wire/reg 或最终文本操作符；pipeline 调用 Verilog lowering，由 process
-和 driver evidence 完成 storage 决策，并把 `=`/`<=` 明确记录到独立
-`VerilogRenderIR.assignment_operators`。renderer 只消费该 target IR；缺少映射时以
-`HDLX-GEN-LOWERING-INCOMPLETE` 失败。
+和 driver evidence 完成 storage 决策，并把 `wire/reg/integer` 与 `=`/`<=` 分别明确记录到
+独立 `VerilogRenderIR.storage_kinds` 和 `assignment_operators`。renderer 只消费该 target IR；
+缺少映射时以 `HDLX-GEN-LOWERING-INCOMPLETE` 失败。新增 storage 字段位于旧 positional
+`assignment_operators` 参数之后，保持 v0.1.1 构造签名兼容。
 
 SystemVerilog 标识符大小写敏感。pipeline 会向 identifier lowering 传入大小写策略；默认
 仍为现有 VHDL 大小写不敏感策略，以保证旧 API 和 golden 逐字稳定。Canonical JSON 不增加
@@ -122,7 +123,8 @@ pipeline-owned Verilog lowering、renderer 和新 golden。可用时以 Icarus/V
 - `logic` 是变量/网类型组合语义，不能按关键词直接映射 wire/reg；必须由 driver evidence
   决定目标声明。
 - `always_comb` 有隐式敏感集、单驱动和 time-zero 执行语义；Verilog `always @(*)` 不承诺
-  time-zero 调度完全等价，文档和差分采样必须限定边界。
+  time-zero 调度完全等价；有读取依赖时 warning 并在稳定输入后差分采样，无任何读取依赖时以
+  `HDLX-SV-ALWAYS-COMB-NO-TRIGGER` 拒绝。
 - SystemVerilog 没有语法关键字区分同步 reset 与普通 clocked enable。MVP 只把顶层
   `if/else` 且 reset identifier 命中明确记录的 `rst/reset` 命名约定时分类为
   `ResetSpec(SYNCHRONOUS)`；其他条件保留为普通时序 `IfStatement`。两种渲染保持相同
@@ -131,7 +133,7 @@ pipeline-owned Verilog lowering、renderer 和新 golden。可用时以 Icarus/V
   canonical 子节点暂时继承 module span。module 边界注释可保留，无法安全关联的内部
   注释由 strict 拒绝、best-effort warning，不静默丢失。
 - `always_ff` 的事件控制、blocking/nonblocking、reset 优先级必须从 Slang 结构读取；任何
-  多时钟、复合 event 或不明确 reset 形态保守拒绝。
+  多时钟、复合 event、不明确 reset 形态或异步 reset event/条件 polarity 不一致均保守拒绝。
 - SystemVerilog expression sizing、signedness、unsized literal 和 self/context-determined
   规则比现有 IR 更丰富；无法证明目标 Verilog-2001 等价时拒绝，不能靠 best-effort 放行。
 - named connection 和模块引用必须使用 Slang 已解析的 symbol；未知 black box 只能在端口

@@ -1,0 +1,1 @@
+`define HDL_X_INCLUDED_WIDTH 4

@@ -1,105 +1,73 @@
-# HDL-X 0.2.0-rc1 SystemVerilog MVP Release Checklist
+# HDL-X 0.2.0 Release Freeze Checklist
 
-本清单描述 v0.2 正式候选的技术门禁。人类可读候选版本为 `0.2.0-rc1`，PEP 440 / wheel
-metadata 为 `0.2.0rc1`。它与已发布 `v0.1.1` 明确区分；在本清单全部完成前不得创建
-v0.2 tag 或 GitHub Release。v0.1.1 的历史证据继续保留在 `RELEASE_CHECKLIST.md`。
+本清单描述从已验收 `0.2.0-rc1` 推进到正式 `0.2.0` 的冻结门禁。PEP 440 / wheel metadata
+使用 `0.2.0`。在所有技术门禁完成且项目所有者明确说“允许发布”前，不创建 `v0.2.0`
+tag 或 GitHub Release；禁止 force push。v0.1.1 历史证据保留在 `RELEASE_CHECKLIST.md`。
 
-## 版本与兼容性
+## 基线与兼容性
 
-- [x] 使用 `v0.1.1` / `7bf9785d29410360979ca56c0563f45d9467d1c2` 作为稳定基线。
-- [x] 候选版本确定为显示形式 `0.2.0-rc1`、PEP 440 形式 `0.2.0rc1`。
+- [x] 本轮开始时 `main`、`origin/main` 与声明基线
+  `2a38b2f70382a27d57f3d1379fa003f68c9d1d88` 一致，ahead/behind 为 0/0，工作区干净。
+- [x] GitHub Actions [run 32639425584](https://github.com/ronghui0411/HDL-X/actions/runs/32639425584)
+  的 head SHA 与基线一致，四个 job 均 success；这是 RC 基线证据，不是本轮最终 CI。
+- [x] 基线远端没有 v0.2 tag 或 GitHub Release。
 - [x] 不删除或改名公开 Python API，不改变 `ConversionResult.design` 的公开节点类型。
 - [x] 不改变 Canonical IR JSON 字段；deprecated `AssignmentKind`、`DriverKind` 继续保留。
-- [x] 不修改已有 VHDL generator、lowering、Canonical IR 或 tracked VHDL golden。
-- [x] 最终完整 v0.1.1 回归和真实 GHDL integration 零跳过通过。
-- [x] tracked VHDL golden 与 `v0.1.1` 逐字一致（0 diff）。
+- [x] 新 `VerilogRenderIR.storage_kinds` 位于旧 positional `assignment_operators` 参数之后，
+  并有 v0.1.1 构造兼容回归测试。
+- [x] 本轮最终 tracked VHDL golden 相对 `v0.1.1` 逐字一致（0 diff）；已有 SV golden 未修改，只新增两份有真实测试证据的冻结 golden。
 
-## 真实 SystemVerilog frontend
+## 真实 frontend、语义边界与架构
 
-- [x] 只通过精确 optional dependency `pyslang==11.0.0` 启用 SystemVerilog 输入。
-- [x] backend 实际调用 Slang `SyntaxTree` 和 `Compilation`；不是正则或 fixture parser。
-- [x] Slang 对象只存在于 `parser/slang` 私有边界；Raw/Canonical/lowering/generator 不持有
-  `pyslang` 类型。
-- [x] `--require-slang-integration` 在 runtime 缺失、版本不精确、零选择或 skip 时失败。
-- [x] 本地真实 frontend gate 保持 `30 passed, 0 skipped`，没有为新增负面覆盖增加收集数。
-- [x] 远端 `systemverilog-mvp` 实际得到 Slang `30 passed, 0 skipped`。
+- [x] 精确 optional dependency `pyslang==11.0.0`；真实 `SyntaxTree`/`Compilation` 路径。
+- [x] 递归检查 Raw 与 Canonical 全图，不含任何 `pyslang` 对象；Canonical、transformer、
+  generator 没有 pyslang import。
+- [x] `always_comb` 有读取依赖时给 `HDLX-SV-ALWAYS-COMB-TIME-ZERO` warning；无触发依赖以
+  `HDLX-SV-ALWAYS-COMB-NO-TRIGGER` 拒绝。
+- [x] X/Z edge 以 `HDLX-SV-EDGE-XZ` 限定稳定 0/1 承诺。
+- [x] supported signed 参数表达式有真实 Slang/golden/差分覆盖；mixed signedness 与 unsigned
+  integer parameter 分别以 `HDLX-SV-SIGNED-SIZING`、`HDLX-SV-PARAMETER-SIGNEDNESS` 拒绝。
+- [x] 任何 include、package/import、多 compilation unit 结构化拒绝；macro-only include 有
+  真实 Slang 负面 fixture。
+- [x] 显式/隐式 generate 与局部信号以 `HDLX-SV-GENERATE` 拒绝，不静默展开或省略。
+- [x] supported 同步/异步高低有效 reset 有真实 Slang/golden/差分覆盖；event/条件 polarity
+  不一致以 `HDLX-SV-ASYNC-RESET-EVENT` 拒绝，未分类命名返回明确 warning。
+- [x] pipeline/lowering 拥有 identifier、storage、blocking/non-blocking 决策；renderer 和
+  Jinja2 不从 Canonical compatibility 字段重新推导目标语义。
+- [x] strict/best-effort 的 unsafe 边界均有结构化诊断回归，best-effort 不静默丢弃 RTL。
 
-## 语义边界与负面门禁
+## 本地与远端测试门禁
 
-- [x] `always_comb` → `always @(*)` 不改变输出，但返回
-  `HDLX-SV-ALWAYS-COMB-TIME-ZERO` warning。
-- [x] edge-triggered `always_ff` 对 X/Z transition 返回 `HDLX-SV-EDGE-XZ` warning；只承诺
-  稳定 0/1 跳变。
-- [x] Slang signedness conversion 与 mixed signed/unsigned expression 以
-  `HDLX-SV-SIGNED-SIZING` 拒绝；best-effort 同样失败。
-- [x] 跨文件 include/compilation-unit 以 `HDLX-SV-COMPILATION-UNIT` 拒绝。
-- [x] SystemVerilog generate 以 `HDLX-SV-GENERATE` 拒绝，不展开、不静默省略。
-- [x] 未命中 rst/reset 命名约定的 `clear/clr/por` 疑似复位保留普通 clocked if/else，并
-  返回 `HDLX-SV-RESET-UNCLASSIFIED` warning。
-- [x] two-state `bit/int` 数据对象、initializer、复杂类型和 testbench-only construct
-  继续结构化拒绝；best-effort 不跳过 RTL/结构节点。
-- [x] 风险和承诺范围记录在 `V0_2_RELEASE_NOTES.md`。
-
-## 编译、差分与 CI
-
-- [x] workflow actions 使用审核后的完整 commit SHA；Ubuntu 固定为 24.04。
-- [x] `systemverilog-mvp` 固定 pyslang Linux wheel URL/SHA-256，并安装 Icarus/VVP 与
-  `libgnat-13`。
-- [x] CI 文本门禁强制 Slang `30/30 passed, 0 skipped` 和 SystemVerilog compile/
-  equivalence `4/4 passed, 0 skipped`。
-- [x] 远端 SystemVerilog compile/equivalence 实际得到 `4 passed, 0 skipped`。
-- [x] 远端 VHDL semantic equivalence 实际得到 `2 passed, 0 skipped`。
-- [x] 远端完整质量 job 与 isolated wheelhouse smoke 全部成功。
+- [x] 本地真实 Slang integration：`41 passed, 0 skipped`（pyslang 11.0.0）。
+- [ ] 具备 Icarus/VVP 的最终远端 SystemVerilog compile/equivalence：`8 passed, 0 skipped`。
+- [ ] 最终远端 VHDL semantic equivalence：`2 passed, 0 skipped`。
+- [x] 本地完整 pytest 331 passed、10 个外部模拟器缺失 skip；GHDL 129/129、Ruff、compileall、pip check、diff check 全部通过，skip 未计为 pass。
+- [x] workflow actions 全部固定到审核后的 40 位 commit SHA，Ubuntu 为 24.04。
+- [x] workflow 文本门禁强制 Slang 41/41 与 SystemVerilog equivalence 8/8，失败或 skip 均失败。
+- [ ] 本轮普通 commit/push 后读取真实远端 run，四个 job 全部 success。
 
 ## 版本、wheel、SBOM 与 NOTICE
 
-- [x] `pyproject.toml` 使用 `version = "0.2.0rc1"` 并精确声明
-  `pyslang==11.0.0` optional extra。
-- [x] README、候选 checklist、release notes、开发日志和 THIRD_PARTY_NOTICES 区分
-  `0.2.0-rc1` 与历史 `v0.1.1`。
-- [x] 最终 wheel metadata 为 `Version: 0.2.0rc1`，文件名为
-  `hdl_x-0.2.0rc1-py3-none-any.whl`，模板与 entry points 完整。
-- [x] clean wheelhouse smoke 在 `system_site_packages=False` venv 中只用 `--no-index`
-  安装 `hdl-x[systemverilog]`，并完成 doctor、真实 VHDL/SystemVerilog 转换和 golden 比较。
-- [x] 从上述候选 wheelhouse 重新生成 CycloneDX 1.6 `SBOM.cdx.json`。
-- [x] SBOM 明确包含 `hdl-x==0.2.0rc1`、`pyGHDL==6.0.0`、`pyslang==11.0.0`、active
-  `systemverilog` extra 依赖关系及 wheel SHA-256。
-- [x] `THIRD_PARTY_NOTICES` 记录 pyslang/Slang MIT、pyGHDL/libghdl GPL-2.0-or-later、
-  上游源码与“不捆绑进 HDL-X wheel”的边界。
-- [x] 0.2.0-rc1 不构建、不发布 PyInstaller EXE。
-- [x] 当前请求只授权 commit/push/等待 CI；暂不创建 tag 或 Release。
+- [x] `pyproject.toml` 与 smoke script 使用 `0.2.0`；`pyslang==11.0.0` 保持精确固定。
+- [x] README、release notes、checklist、MVP 边界和 `THIRD_PARTY_NOTICES` 使用正式 0.2.0
+  发布冻结措辞，并继续声明不发布 EXE。
+- [x] 构建 `hdl_x-0.2.0-py3-none-any.whl`：67 entries、2 个 entry points、3 个模板和 2 个 license files 完整；SHA-256 `834c447b3bc95bf256072f03c924a375c89ff3443aaebb80ad0c8a7ac1f1d5dc`。
+- [x] clean wheelhouse smoke 在 `system_site_packages=False` venv 中仅用 `--no-index` 安装，
+  doctor、真实 VHDL/SystemVerilog 转换及 golden 字节比较通过。
+- [x] 从最终 wheelhouse 重建 CycloneDX 1.6 `SBOM.cdx.json`；包含 `hdl-x==0.2.0`、
+  `pyGHDL==6.0.0`、`pyslang==11.0.0` 和 active `systemverilog` extra。
+- [x] `THIRD_PARTY_NOTICES` 保持 pyGHDL/libghdl、pyslang/Slang 的许可证、上游源码和
+  “不捆绑进 HDL-X wheel”边界；项目自有源码仍为 MIT、Copyright 2026 rh。
+- [x] v0.2.0 不构建、不发布 PyInstaller EXE。
+- [x] wheelhouse 官方 pyGHDL/pyslang wheel SHA-256 分别为 `624ce2fcb3163c16215e7d0390caaf91bd0ae50a77dcb2b60e2eae35a5ebe839`、`b9cae2cc3d856bf7e52620a74cf9e2bb687c280ecccf70fbb63e49e690e77a47`；VHDL/SV generated 与既有 golden 分别为 `aac65f543e01354dee26c04b817a5333a5a533695d337d814a95f2e7ac195428`、`137447ebe3e06115bccb2dd941977270b20ec400001b51bb7bcee778efabdb83`。
+- [x] 最终 SBOM 共 21 个 project/dependency components，active extra 为 `systemverilog`，SHA-256 `d38f31295d0b87b8ebeb80233dcbfd967df3ad6b76a0bfde0c4ca1a3babd9f9d`。
 
-远端验收证据：候选代码提交 `3f4c29911f0a82b313f8201ce4e930a592abb084` 的 GitHub Actions [run 32639207648](https://github.com/ronghui0411/HDL-X/actions/runs/32639207648) 实际得到 Slang `30/30`、SystemVerilog equivalence `4/4`、VHDL semantic equivalence `2/2`，均为 `failed=0, skipped=0`；完整质量门禁为 `319 passed`，VHDL golden 基线步骤和 isolated wheelhouse smoke 均成功。
+## 发布授权
 
-本地最终证据：完整 pytest `313 passed, 6 skipped`；GHDL integration `129/129 passed,
-0 skipped`；6 个 skip 仅因本机缺少 `ghdl`/`iverilog`/`vvp`，没有计为等价通过。
-Ruff、compileall、pip check、diff check 和 VHDL golden 0 diff 通过。最终候选 wheel SHA-256
-为 `062db304cebcfc07b95dbc0ba85c734c37d0edaa63bbf5c818262d5202388197`；SBOM SHA-256
-为 `aad33538d667f414d2458cb6b393e3ee8a802cd1ed1ac214aa47f279c21d5339`。
+- [ ] 项目所有者明确说“允许发布”。
+- [ ] 创建 annotated `v0.2.0` tag 并普通 push。
+- [ ] 创建 GitHub Release 并附 wheel、源码归档、SBOM、THIRD_PARTY_NOTICES 和 SHA-256。
 
-## 本地最终验证命令
-
-```powershell
-python -m pytest tests/integration -m slang_integration -q -ra --require-slang-integration
-python -m pytest tests/equivalence/test_systemverilog_differential.py -q -ra --require-slang-integration --require-systemverilog-equivalence
-python -m pytest -q -ra -p no:cacheprovider --require-ghdl-integration --require-slang-integration
-python -m ruff check .
-python -m compileall -q src tests packaging/windows
-python -m pip check
-git diff --exit-code 7bf9785d29410360979ca56c0563f45d9467d1c2 -- 'tests/golden/m*.v'
-python scripts/release_wheel_smoke.py --workspace <new-empty-directory>
-```
-
-## 验收判定
-
-只有实际证据同时满足以下条件，才能报告 v0.2 MVP 验收完成：
-
-```text
-Slang integration: 30 passed, 0 skipped
-SystemVerilog compile/equivalence: 4 passed, 0 skipped
-VHDL regression: 0 golden diff
-完整质量门禁：全部通过
-SBOM：由 0.2.0rc1 候选 wheelhouse 重新生成并包含 pyslang 11.0.0
-```
-
-任何版本、SBOM、公开语义或远端结果不一致都必须暂停；不得创建 v0.2.0 tag。
+最终目标：Slang integration `41 passed, 0 skipped`；SystemVerilog compile/equivalence
+`8 passed, 0 skipped`；VHDL semantic equivalence `2 passed, 0 skipped`；完整质量、isolated
+wheelhouse smoke 和 VHDL golden 0 diff 全部通过。技术门禁完成仍只代表“可以请求发布授权”。

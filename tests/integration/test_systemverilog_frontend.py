@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import fields, is_dataclass
 from pathlib import Path
 
 import pytest
@@ -77,10 +78,34 @@ def test_slang_objects_do_not_leak_beyond_private_backend() -> None:
     raw = frontend.parse(FIXTURES / "sv_hierarchy.sv")
     design = frontend.adapter.adapt(raw)
 
-    assert not type(raw).__module__.startswith("pyslang")
-    for module in design.modules:
-        for node in (module, *module.parameters, *module.ports, *module.items):
-            assert not type(node).__module__.startswith("pyslang")
+    _assert_no_pyslang_objects(raw)
+    _assert_no_pyslang_objects(design)
+
+
+def _assert_no_pyslang_objects(value: object, seen: set[int] | None = None) -> None:
+    if seen is None:
+        seen = set()
+    if value is None or isinstance(value, str | bytes | int | float | bool | Path):
+        return
+    identity = id(value)
+    if identity in seen:
+        return
+    seen.add(identity)
+    assert not type(value).__module__.startswith("pyslang")
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _assert_no_pyslang_objects(key, seen)
+            _assert_no_pyslang_objects(item, seen)
+    elif isinstance(value, list | tuple | set | frozenset):
+        for item in value:
+            _assert_no_pyslang_objects(item, seen)
+    elif is_dataclass(value) and not isinstance(value, type):
+        for item in fields(value):
+            _assert_no_pyslang_objects(getattr(value, item.name), seen)
+    elif hasattr(type(value), "model_fields"):
+        for field_name in type(value).model_fields:
+            _assert_no_pyslang_objects(getattr(value, field_name), seen)
 
 
 @pytest.mark.parametrize(

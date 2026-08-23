@@ -65,3 +65,29 @@ def test_two_state_or_data_integer_types_fail_with_structured_diagnostic(
             )
         assert signed_mixed.value.code == "HDLX-SV-SIGNED-SIZING"
         assert signed_mixed.value.diagnostic.source_span is not None
+
+
+@pytest.mark.parametrize(
+    ("fixture", "code"),
+    [
+        ("unsupported_always_comb_no_trigger.sv", "HDLX-SV-ALWAYS-COMB-NO-TRIGGER"),
+        ("unsupported_async_reset_edge.sv", "HDLX-SV-ASYNC-RESET-EVENT"),
+    ],
+)
+def test_unsafe_time_zero_or_reset_edge_never_passes_best_effort(
+    fixture: str,
+    code: str,
+) -> None:
+    for options in (
+        ConversionOptions(strict=True),
+        ConversionOptions(best_effort=True, strict=False),
+    ):
+        with pytest.raises(UnsupportedConstructError) as captured:
+            convert_file(
+                FIXTURES / fixture,
+                source_language="systemverilog",
+                options=options,
+            )
+
+        assert captured.value.code == code
+        assert captured.value.diagnostic.source_span is not None

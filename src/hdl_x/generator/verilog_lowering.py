@@ -10,19 +10,28 @@ from hdl_x.ir import (
     CaseStatement,
     CombinationalProcess,
     Design,
+    DriverKind,
     ForGenerate,
     ForStatement,
     IfGenerate,
     IfStatement,
+    IntegerType,
     ModuleItem,
+    PortDirection,
     ProceduralAssignment,
     SequentialProcess,
+    Signal,
     StatementNode,
+    Variable,
 )
 from hdl_x.transformer.identifier_resolver import DesignIdentifierResolver, NameStyle
 from hdl_x.transformer.type_lowering import DriverAnalysis
 
-from .verilog_ir import VerilogAssignmentOperator, VerilogRenderIR
+from .verilog_ir import (
+    VerilogAssignmentOperator,
+    VerilogRenderIR,
+    VerilogStorageKind,
+)
 
 
 class VerilogLowering:
@@ -61,8 +70,55 @@ class VerilogLowering:
         return VerilogRenderIR(
             design=design,
             name_mappings={} if name_mappings is None else name_mappings,
+            storage_kinds=_storage_kinds(design),
             assignment_operators=_assignment_operators(design),
         )
+
+
+def _storage_kinds(design: Design) -> dict[int, VerilogStorageKind]:
+    kinds: dict[int, VerilogStorageKind] = {}
+    for module in design.modules:
+        for port in module.ports:
+            if isinstance(port.rtl_type, IntegerType):
+                kinds[id(port)] = VerilogStorageKind.INTEGER
+            elif port.direction in (PortDirection.INPUT, PortDirection.INOUT):
+                kinds[id(port)] = VerilogStorageKind.WIRE
+            elif port.driver_kind is DriverKind.PROCEDURAL:
+                kinds[id(port)] = VerilogStorageKind.REG
+            else:
+                kinds[id(port)] = VerilogStorageKind.WIRE
+        for declaration in (*module.signals, *module.variables):
+            _record_declaration_storage(declaration, kinds)
+        _collect_item_storage_kinds(module.items, kinds)
+    return kinds
+
+
+def _collect_item_storage_kinds(
+    items: Sequence[ModuleItem],
+    kinds: dict[int, VerilogStorageKind],
+) -> None:
+    for item in items:
+        if isinstance(item, Signal | Variable):
+            _record_declaration_storage(item, kinds)
+        elif isinstance(item, ForGenerate):
+            _collect_item_storage_kinds(item.body, kinds)
+        elif isinstance(item, IfGenerate):
+            _collect_item_storage_kinds(item.then_body, kinds)
+            _collect_item_storage_kinds(item.else_body, kinds)
+
+
+def _record_declaration_storage(
+    declaration: Signal | Variable,
+    kinds: dict[int, VerilogStorageKind],
+) -> None:
+    if isinstance(declaration.rtl_type, IntegerType):
+        kinds[id(declaration)] = VerilogStorageKind.INTEGER
+    elif isinstance(declaration, Variable):
+        kinds[id(declaration)] = VerilogStorageKind.REG
+    elif declaration.driver_kind is DriverKind.PROCEDURAL:
+        kinds[id(declaration)] = VerilogStorageKind.REG
+    else:
+        kinds[id(declaration)] = VerilogStorageKind.WIRE
 
 
 def _assignment_operators(

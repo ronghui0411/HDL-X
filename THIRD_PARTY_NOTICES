@@ -1,5 +1,5 @@
-HDL-X 0.2.0-rc1 Third-Party Notices
-===================================
+HDL-X 0.2.0 Third-Party Notices
+===============================
 
 Copyright (c) 2026 rh. HDL-X is licensed under the MIT License; see LICENSE.
 
@@ -10,10 +10,10 @@ dependencies through Python package metadata. Each separately installed
 dependency remains subject to its own license, and its wheel contains the
 corresponding license text.
 
-The 0.2.0-rc1 candidate does not include the previously built PyInstaller EXE
+The 0.2.0 source and wheel distribution boundary does not include the previously built PyInstaller EXE
 or its embedded Python/pyGHDL/libghdl runtime. EXE distribution remains
-deferred for a separate binary-distribution review. No v0.2 tag or GitHub
-Release is implied by this candidate inventory.
+deferred for a separate binary-distribution review. No v0.2.0 tag or GitHub
+Release has been created at this freeze point.
 
 SystemVerilog frontend
 ----------------------
@@ -29,11 +29,11 @@ pyslang 11.0.0 / Slang
   License text in the installed wheel:
     pyslang-11.0.0.dist-info/licenses/LICENSE
 
-The candidate declares pyslang only through the `systemverilog` optional extra
+HDL-X 0.2.0 declares pyslang only through the `systemverilog` optional extra
 with an exact `==11.0.0` requirement. The HDL-X wheel does not bundle the
 pyslang wheel or Slang binaries. Users who do not install this extra retain the
 VHDL path; SystemVerilog requests fail explicitly at the frontend boundary.
-The candidate CycloneDX SBOM includes the separately installed pyslang wheel
+The 0.2.0 CycloneDX SBOM includes the separately installed pyslang wheel
 and the active-extra dependency relationship.
 
 Primary VHDL runtime dependency
@@ -52,12 +52,12 @@ The official pyGHDL wheel is platform-specific and contains libghdl plus GHDL
 standard/IEEE VHDL resources. It is not part of the HDL-X wheel or presented as
 an HDL-X-owned release artifact.
 
-Resolved runtime wheelhouse used for the 0.2.0-rc1 smoke test
+Resolved runtime wheelhouse used for the 0.2.0 smoke test
 -------------------------------------------------------------
 
 The machine-readable component versions, wheel SHA-256 values, dependency
 relationships, source links, and license identifiers are in SBOM.cdx.json.
-The candidate Windows CPython 3.13 wheelhouse contains:
+The frozen Windows CPython 3.13 wheelhouse contains:
 
   annotated-doc 0.0.5                 MIT
   annotated-types 0.8.0               MIT
@@ -111,7 +111,7 @@ HDL-X corresponding source is retained in the public GitHub repository:
 
   https://github.com/ronghui0411/HDL-X
 
-If the candidate is later promoted, the GitHub-generated source archive will
+After explicit owner authorization, the GitHub-generated source archive will
 provide the tagged HDL-X source. Third-party corresponding source remains
 available from the upstream locations listed above. The SBOM and this notice
 are retained in the repository root and are planned as future Release

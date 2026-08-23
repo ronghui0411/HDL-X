@@ -66,6 +66,12 @@ class PySlangBackend(SlangFrontendBackend):
                 file=str(path),
             ) from error
 
+        self._reject_include_directives(
+            syntax_tree,
+            source_manager=source_manager,
+            source_path=path,
+        )
+
         if diagnostics:
             self._raise_diagnostic(
                 diagnostics[0],
@@ -180,6 +186,36 @@ class PySlangBackend(SlangFrontendBackend):
             source_span=span,
             source_snippet=self._source_line(source_path, span.start.line),
             suggestion="移除该构造，或等待 HDL-X 扩展明确支持范围。",
+        )
+
+    def _reject_include_directives(
+        self,
+        syntax_tree: Any,
+        *,
+        source_manager: Any,
+        source_path: Path,
+    ) -> None:
+        directives = tuple(syntax_tree.getIncludeDirectives())
+        if not directives:
+            return
+        directive = min(
+            directives,
+            key=lambda item: (
+                source_manager.getLineNumber(item.syntax.sourceRange.start),
+                source_manager.getColumnNumber(item.syntax.sourceRange.start),
+            ),
+        )
+        span = self._source_span(
+            directive.syntax.sourceRange,
+            source_manager,
+            source_path,
+        )
+        raise UnsupportedConstructError(
+            f"跨文件 include {directive.path!r} 不在 v0.2 单文件 MVP 内",
+            code="HDLX-SV-COMPILATION-UNIT",
+            source_span=span,
+            source_snippet=self._source_line(source_path, span.start.line),
+            suggestion="移除 include 并使用单文件受支持子集，或等待多文件支持。",
         )
 
     def _reject_cross_file_syntax(

@@ -2,7 +2,7 @@
 
 from .base import Generator
 from .verilog import VerilogGenerator, VerilogRenderer
-from .verilog_ir import VerilogAssignmentOperator, VerilogRenderIR
+from .verilog_ir import VerilogAssignmentOperator, VerilogRenderIR, VerilogStorageKind
 from .verilog_lowering import VerilogLowering
 
 __all__ = [
@@ -11,5 +11,6 @@ __all__ = [
     "VerilogAssignmentOperator",
     "VerilogLowering",
     "VerilogRenderer",
+    "VerilogStorageKind",
     "VerilogRenderIR",
 ]

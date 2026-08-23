@@ -364,6 +364,17 @@ class SystemVerilogAdapter(ParserAdapter[RawSystemVerilogDesign]):
     def _adapt_type(self, data_type: JsonObject) -> ScalarType | VectorType | IntegerType:
         kind = self._kind(data_type)
         if kind in {"IntType", "IntegerType"}:
+            signing = data_type.get("signing")
+            if (
+                signing is not None
+                and self._kind(self._object(signing, "integer signing"))
+                == "UnsignedKeyword"
+            ):
+                self._unsupported(
+                    "int/integer unsigned parameter 无法用 Verilog-2001 integer "
+                    "保持 signed sizing",
+                    code="HDLX-SV-PARAMETER-SIGNEDNESS",
+                )
             if data_type.get("dimensions"):
                 self._unsupported(
                     "integer packed dimension 不在 v0.2 MVP 内",

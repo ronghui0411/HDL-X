@@ -1,4 +1,4 @@
-name: HDL-X 0.2.0-rc1 release gates
+name: HDL-X 0.2.0 release gates
 
 on:
   pull_request:
@@ -127,21 +127,21 @@ jobs:
             --require-slang-integration \
             | tee build/slang-integration.log
           grep --fixed-strings \
-            "Slang integration: EXECUTED 30/30 (passed=30, failed=0, skipped=0, pyslang=11.0.0)" \
+            "Slang integration: EXECUTED 41/41 (passed=41, failed=0, skipped=0, pyslang=11.0.0)" \
             build/slang-integration.log
 
       - name: Run SystemVerilog compile and equivalence with zero skips
         run: |
           set -euxo pipefail
           mkdir -p build
-          python -m pytest tests/equivalence/test_systemverilog_differential.py -q -ra \
+          python -m pytest tests/equivalence -m systemverilog_equivalence -q -ra \
             --require-slang-integration --require-systemverilog-equivalence \
             | tee build/systemverilog-equivalence.log
           grep --fixed-strings \
-            "Slang integration: EXECUTED 4/4 (passed=4, failed=0, skipped=0, pyslang=11.0.0)" \
+            "Slang integration: EXECUTED 8/8 (passed=8, failed=0, skipped=0, pyslang=11.0.0)" \
             build/systemverilog-equivalence.log
           grep --fixed-strings \
-            "SystemVerilog equivalence: EXECUTED 4/4 (passed=4, failed=0, skipped=0, missing=none)" \
+            "SystemVerilog equivalence: EXECUTED 8/8 (passed=8, failed=0, skipped=0, missing=none)" \
             build/systemverilog-equivalence.log
 
   quality:

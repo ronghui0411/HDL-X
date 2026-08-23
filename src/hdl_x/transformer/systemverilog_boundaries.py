@@ -4,13 +4,24 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from hdl_x.diagnostics import Diagnostic, DiagnosticSeverity
+from hdl_x.diagnostics import Diagnostic, DiagnosticSeverity, UnsupportedConstructError
 from hdl_x.ir import (
+    BinaryExpr,
+    BlockStatement,
+    CaseStatement,
     CombinationalProcess,
+    Concatenation,
+    ContinuousAssignment,
     Design,
+    ForStatement,
+    FunctionCall,
     Identifier,
     IfStatement,
+    Index,
+    ProceduralAssignment,
     SequentialProcess,
+    Slice,
+    TernaryExpr,
     UnaryExpr,
     UnaryOperator,
 )
@@ -26,6 +37,14 @@ class SystemVerilogSemanticBoundaryAnalysis:
         for module in design.modules:
             for item in module.items:
                 if isinstance(item, CombinationalProcess):
+                    if not self._statements_have_read_dependency(item.body):
+                        raise UnsupportedConstructError(
+                            "always_comb 不读取任何触发表达式；降为 always @(*) 后"
+                            "无法保持 time-zero 自动执行语义",
+                            code="HDLX-SV-ALWAYS-COMB-NO-TRIGGER",
+                            source_span=item.source_span,
+                            suggestion="让组合过程显式读取输入，或改写为受支持的连续赋值。",
+                        )
                     diagnostics.append(
                         Diagnostic(
                             code="HDLX-SV-ALWAYS-COMB-TIME-ZERO",
@@ -69,6 +88,100 @@ class SystemVerilogSemanticBoundaryAnalysis:
                             )
                         )
         return tuple(diagnostics)
+
+    @classmethod
+    def _statements_have_read_dependency(cls, statements: Iterable[object]) -> bool:
+        """只在能证明组合过程完全没有读依赖时返回 False。"""
+
+        for statement in statements:
+            if isinstance(statement, ContinuousAssignment | ProceduralAssignment):
+                if cls._expression_has_identifier(statement.value):
+                    return True
+                if cls._target_selector_has_identifier(statement.target):
+                    return True
+            elif isinstance(statement, IfStatement):
+                if cls._expression_has_identifier(statement.condition):
+                    return True
+                if cls._statements_have_read_dependency(statement.then_body):
+                    return True
+                if cls._statements_have_read_dependency(statement.else_body):
+                    return True
+            elif isinstance(statement, CaseStatement):
+                if cls._expression_has_identifier(statement.expression):
+                    return True
+                for alternative in statement.alternatives:
+                    if any(
+                        cls._expression_has_identifier(selector)
+                        for selector in alternative.selectors
+                    ):
+                        return True
+                    if cls._statements_have_read_dependency(alternative.body):
+                        return True
+                if cls._statements_have_read_dependency(statement.default_body):
+                    return True
+            elif isinstance(statement, ForStatement):
+                if cls._expression_has_identifier(statement.range.left):
+                    return True
+                if cls._expression_has_identifier(statement.range.right):
+                    return True
+                if cls._statements_have_read_dependency(statement.body):
+                    return True
+            elif isinstance(statement, BlockStatement):
+                if cls._statements_have_read_dependency(statement.statements):
+                    return True
+            else:
+                return True
+        return False
+
+    @classmethod
+    def _expression_has_identifier(cls, expression: object) -> bool:
+        if isinstance(expression, Identifier | FunctionCall):
+            return True
+        if isinstance(expression, UnaryExpr):
+            return cls._expression_has_identifier(expression.operand)
+        if isinstance(expression, BinaryExpr):
+            return cls._expression_has_identifier(
+                expression.left
+            ) or cls._expression_has_identifier(expression.right)
+        if isinstance(expression, TernaryExpr):
+            return any(
+                cls._expression_has_identifier(item)
+                for item in (
+                    expression.condition,
+                    expression.when_true,
+                    expression.when_false,
+                )
+            )
+        if isinstance(expression, Concatenation):
+            return any(cls._expression_has_identifier(item) for item in expression.parts)
+        if isinstance(expression, Index):
+            return cls._expression_has_identifier(
+                expression.value
+            ) or cls._expression_has_identifier(expression.index)
+        if isinstance(expression, Slice):
+            return any(
+                cls._expression_has_identifier(item)
+                for item in (expression.value, expression.left, expression.right)
+            )
+        return False
+
+    @classmethod
+    def _target_selector_has_identifier(cls, target: object) -> bool:
+        if isinstance(target, Identifier):
+            return False
+        if isinstance(target, Index):
+            return cls._target_selector_has_identifier(
+                target.value
+            ) or cls._expression_has_identifier(target.index)
+        if isinstance(target, Slice):
+            return (
+                cls._target_selector_has_identifier(target.value)
+                or cls._expression_has_identifier(target.left)
+                or cls._expression_has_identifier(target.right)
+            )
+        if isinstance(target, Concatenation):
+            return any(cls._target_selector_has_identifier(item) for item in target.parts)
+        return cls._expression_has_identifier(target)
 
     @classmethod
     def _has_unclassified_reset_candidate(cls, statements: Iterable[object]) -> bool:
