@@ -29,16 +29,16 @@ v0.3 tag 或 GitHub Release。
   多驱动及不安全 generate 均有负面测试和稳定诊断码。
 - [x] 本机已分别用 pyGHDL 分析 7 组生成 VHDL DUT+TB，并用 pyslang 编译 7 组原始
   Verilog DUT+TB；这不是双 simulator trace 等价通过声明。
-- [ ] **阻塞：** Ubuntu 24.04 真实 CI 中 Verilog→VHDL 差分必须为
+- [x] Ubuntu 24.04 真实 CI 中 Verilog→VHDL 差分为
   `passed=7, failed=0, skipped=0`。
 
 ## 回归与质量门禁
 
-- [ ] **阻塞：** 完整 pytest 在具备外部工具的 CI 中零失败、零未说明 skip。
+- [x] 完整 pytest 在具备外部工具的 CI 中为 **403 passed, 0 skipped**。
 - [x] 真实 GHDL integration **146/146 passed, 0 skipped**。
 - [x] 真实 Slang integration **96 passed, 0 skipped**。
-- [ ] **阻塞：** VHDL semantic equivalence 为 `2 passed, 0 skipped`。
-- [ ] **阻塞：** SystemVerilog compile/equivalence 为 `8 passed, 0 skipped`。
+- [x] VHDL semantic equivalence 为 **2 passed, 0 skipped**。
+- [x] SystemVerilog compile/equivalence 为 **8 passed, 0 skipped**。
 - [x] Ruff、compileall、pip check 与 `git diff --check` 全部通过。
 - [x] 本机缺少 standalone `ghdl`、`iverilog`、`vvp` 时，普通入口明确列出 skip，
   三个 `--require-*equivalence` 门禁必须非零失败；不得把这些 skip 计为 pass。
@@ -68,8 +68,9 @@ v0.3 tag 或 GitHub Release。
   GHDL 6.0.0、审核过的 pyGHDL/pyslang wheel URL/SHA-256 和 Icarus/VVP。
 - [x] workflow 分离并强制 VHDL semantic、SystemVerilog、Verilog→VHDL、完整质量和
   isolated wheelhouse smoke 门禁，不允许 skipped 冒充 passed。
-- [ ] **阻塞：** 普通 commit/push 后读取真实远端 run，全部 job 必须 success，且日志中的
-  精确 passed/failed/skipped 计数与本清单一致。
+- [x] 候选代码 commit `f1082152bc7e511d42021d5572305982a5f49013` 已普通 push；真实
+  GitHub Actions run `32685609281` 的 5 个 job 全部 success，且日志中的精确
+  passed/failed/skipped 计数与本清单一致。
 - [ ] 只有上述门禁全部满足并获得项目所有者的单独发布授权后，才允许创建
   `v0.3.0-rc1` tag 或 GitHub Release；不得 force-push。
 

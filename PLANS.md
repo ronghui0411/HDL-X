@@ -2045,4 +2045,4 @@ Verilog → VHDL”的历史范围限制。详细契约见
 4. **posedge/negedge、同步/异步 reset 与 nonblocking 时序过程 — completed**
 5. **signed/width、parameter、instance 和必要 generate — completed**
 6. **注释/span、负面语义证据、GHDL/Icarus 差分和 CI 门禁 — completed**
-7. **完整回归、wheel/SBOM/文档同步与 rc1 readiness — in progress**
+7. **完整回归、wheel/SBOM/文档同步与 rc1 readiness — completed**
