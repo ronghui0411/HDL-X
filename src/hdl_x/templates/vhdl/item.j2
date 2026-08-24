@@ -1,0 +1,37 @@
+{% if include_comments %}{% for comment in item.leading_comments %}{{ indent }}{{ comment | vhdl_comment }}
+{% endfor %}{% endif %}{% if kind == "concurrent_assignment" %}{{ indent }}{{ item.target }} <= {{ item.value }};
+{% elif kind == "process" %}{{ indent }}{{ item.label }} : process({{ item.sensitivity | join(", ") }})
+{% for declaration in item.declarations %}{{ indent }}    variable {{ declaration.name }} : {{ declaration.type_text }};
+{% endfor %}{{ indent }}begin
+{{ body_text }}
+{{ indent }}end process {{ item.label }};
+{% elif kind == "instance" %}{{ indent }}{{ item.label }} : entity work.{{ item.entity_name }}
+{% if item.generic_map %}{{ indent }}    generic map (
+{% for association in item.generic_map %}{{ indent }}        {% if association.formal is not none %}{{ association.formal }} => {% endif %}{{ association.value }}{% if not loop.last %},{% endif %}
+{% endfor %}{{ indent }}    ){% if not item.port_map %};{% endif %}
+{% endif %}{% if item.port_map %}{{ indent }}    port map (
+{% for association in item.port_map %}{{ indent }}        {% if association.formal is not none %}{{ association.formal }} => {% endif %}{{ association.value }}{% if not loop.last %},{% endif %}
+{% endfor %}{{ indent }}    );
+{% endif %}{% if not item.generic_map and not item.port_map %}{{ indent }}    ;
+{% endif %}{% elif kind == "for_generate" %}{{ indent }}{{ item.label }} : for {{ item.index_name }} in {{ item.left }} {{ item.direction }} {{ item.right }} generate
+{% for declaration in item.declarations %}{% for comment in declaration.leading_comments %}{{ indent }}    {{ comment | vhdl_comment }}
+{% endfor %}{{ indent }}    signal {{ declaration.name }} : {{ declaration.type_text }};
+{% for comment in declaration.trailing_comments %}{{ indent }}    {{ comment | vhdl_comment }}
+{% endfor %}{% endfor %}{{ indent }}begin
+{% if items_text %}{{ items_text }}
+{% endif %}{{ indent }}end generate {{ item.label }};
+{% elif kind == "if_generate" %}{{ indent }}{{ item.label }} : if {{ item.condition }} generate
+{% for declaration in item.then_declarations %}{% for comment in declaration.leading_comments %}{{ indent }}    {{ comment | vhdl_comment }}
+{% endfor %}{{ indent }}    signal {{ declaration.name }} : {{ declaration.type_text }};
+{% for comment in declaration.trailing_comments %}{{ indent }}    {{ comment | vhdl_comment }}
+{% endfor %}{% endfor %}{{ indent }}begin
+{% if then_items_text %}{{ then_items_text }}
+{% endif %}{% if item.else_declarations or item.else_items %}{{ indent }}else generate
+{% for declaration in item.else_declarations %}{% for comment in declaration.leading_comments %}{{ indent }}    {{ comment | vhdl_comment }}
+{% endfor %}{{ indent }}    signal {{ declaration.name }} : {{ declaration.type_text }};
+{% for comment in declaration.trailing_comments %}{{ indent }}    {{ comment | vhdl_comment }}
+{% endfor %}{% endfor %}{{ indent }}begin
+{% if else_items_text %}{{ else_items_text }}
+{% endif %}{% endif %}{{ indent }}end generate {{ item.label }};
+{% endif %}{% if include_comments %}{% for comment in item.trailing_comments %}{{ indent }}{{ comment | vhdl_comment }}
+{% endfor %}{% endif %}

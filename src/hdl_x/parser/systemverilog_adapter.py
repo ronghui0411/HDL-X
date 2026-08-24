@@ -299,11 +299,6 @@ class SystemVerilogAdapter(ParserAdapter[RawSystemVerilogDesign]):
                 )
 
             data_type = self._object(header.get("dataType"), "port data type")
-            if self._kind(data_type) in {"IntType", "IntegerType"}:
-                self._unsupported(
-                    "int/integer 数据端口不在 v0.2 MVP 内；仅参数允许 integral atom type",
-                    code="HDLX-SV-DATA-INTEGER",
-                )
             inherits_type = (
                 direction_node is None
                 and self._kind(data_type) == "ImplicitType"
@@ -313,7 +308,7 @@ class SystemVerilogAdapter(ParserAdapter[RawSystemVerilogDesign]):
                 assert previous_type is not None
                 rtl_type = previous_type.model_copy(deep=True)
             else:
-                rtl_type = self._adapt_type(data_type)
+                rtl_type = self._adapt_data_type(data_type)
             declarator = self._object(node.get("declarator"), "port declarator")
             self._reject_declarator_extensions(declarator, category="port")
             ports.append(
@@ -342,12 +337,7 @@ class SystemVerilogAdapter(ParserAdapter[RawSystemVerilogDesign]):
                     code="HDLX-SV-NET-TYPE",
                 )
         data_type = self._object(declaration.get("type"), "data type")
-        if self._kind(data_type) in {"IntType", "IntegerType"}:
-            self._unsupported(
-                "int/integer 数据对象不在 v0.2 MVP 内；仅参数允许 integral atom type",
-                code="HDLX-SV-DATA-INTEGER",
-            )
-        rtl_type = self._adapt_type(data_type)
+        rtl_type = self._adapt_data_type(data_type)
         signals: list[Signal] = []
         for declarator in self._node_list(declaration.get("declarators")):
             self._reject_declarator_extensions(declarator, category="signal")
@@ -360,6 +350,17 @@ class SystemVerilogAdapter(ParserAdapter[RawSystemVerilogDesign]):
                 )
             )
         return signals
+
+    def _adapt_data_type(
+        self,
+        data_type: JsonObject,
+    ) -> ScalarType | VectorType | IntegerType:
+        if self._kind(data_type) in {"IntType", "IntegerType"}:
+            self._unsupported(
+                "int/integer 数据对象不在 v0.2 MVP 内；仅参数允许 integral atom type",
+                code="HDLX-SV-DATA-INTEGER",
+            )
+        return self._adapt_type(data_type)
 
     def _adapt_type(self, data_type: JsonObject) -> ScalarType | VectorType | IntegerType:
         kind = self._kind(data_type)

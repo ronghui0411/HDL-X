@@ -1,58 +1,85 @@
-# HDL-X v0.1.1 Release Checklist
+# HDL-X v0.3.0-rc1 Release Checklist
 
-本清单是发布门禁，不替代法律意见。任何未勾选的“阻塞”项都表示只能生成候选构建，
-不能把公开分发标记为正式 `v0.1.1`。
+本清单是候选发布门禁，不替代法律意见。`v0.2.0` 是不可变稳定基线；任何未勾选的
+“阻塞”项都表示尚未达到创建 `v0.3.0-rc1` tag 的条件。项目所有者尚未授权创建任何
+v0.3 tag 或 GitHub Release。
 
-## 必需门禁
+## 兼容与架构门禁
 
-- [x] Python、pyGHDL/libghdl 与 backend 使用精确 `6.0.0` 版本规则。
-- [x] 真实 in-process GHDL integration 被强制选择，缺失 runtime 时不允许 skip。
-- [x] 完整 pytest、Ruff、compileall 与当前环境的 `pip check` 通过。
-- [x] wheel 可构建，包含 CLI/GUI entry point、verification 模块和 3 个 Jinja2 模板。
-- [x] wheel 本体不捆绑 pyGHDL/libghdl；metadata 明确声明 `pyGHDL==6.0.0`。
-- [x] 在不启用 `--system-site-packages` 的全新虚拟环境，以完整 wheelhouse 和
-  `--no-index` 安装 HDL-X、官方 pyGHDL 6.0.0 与全部运行依赖；CLI、doctor、真实转换、
-  `pip check` 和 golden 字节比较全部通过，并输出 wheel/生成文件 SHA-256。
-- [x] `--require-semantic-equivalence` 在 GHDL CLI/Icarus 缺失时以非零状态失败。
-- [x] 添加 Ubuntu 24.04 semantic-equivalence CI job；GHDL 固定 6.0.0，Actions 固定到
-  审核过的 commit，并强制检查 `passed=2, failed=0, skipped=0`。
-- [ ] **阻塞：** 在具备 `ghdl`、`iverilog`、`vvp` 的独立环境运行
-  `python -m pytest tests/equivalence -q -ra --require-semantic-equivalence`，组合与
-  clock/reset/enable 两个场景均不得失败或跳过。
-- [x] 项目所有者选择 MIT、确认 `Copyright (c) 2026 rh`，并完成第三方 notice、
-  `pyproject.toml` license metadata，并确认与 pyGHDL/libghdl GPL-2.0-or-later 的
-  技术分发边界记录；该记录不作法律结论。
-- [x] v0.1.1 明确不发布 PyInstaller EXE；现有 `dist/HDL-X` 不得作为 Release 制品。
-- [x] 生成 CycloneDX SBOM，并将 SBOM 与 `THIRD_PARTY_NOTICES` 同时保留在仓库根目录和
-  GitHub Release 附件。
+- [x] 基线固定为 `v0.2.0` / `f283854d2d059e1bc54174d7f9509430c984bbe7`，不改写其
+  tag、Release、wheel、SBOM 或历史制品。
+- [x] Canonical IR、公开 Python API、JSON 字段和 deprecated 兼容字段未改变。
+- [x] pyslang 对象只存在于 `parser/slang`；Raw IR 离开 frontend 后是纯 Python 数据。
+- [x] pipeline 拥有 VHDL semantic boundary 与 `VhdlLowering`；`VhdlRenderIR` 承担目标
+  entity/architecture/signal/process/generic/instance 决策，Jinja2 只格式化。
+- [x] VHDL→Verilog 与 SystemVerilog→Verilog 的已有 API/golden 契约保持不变。
+- [x] unsafe Verilog 构造在 strict 和 best-effort 中都以结构化 `HDLX-V2V-*` 诊断失败，
+  不静默删除 RTL。
+- [x] 最终相对 `v0.2.0` 审计确认 `tests/golden` 逐字零差异。
 
-## 构建与验证命令
+## Verilog→VHDL MVP 证据
+
+- [x] 真实 pyslang 11.0.0 覆盖 module/ANSI ports、parameter、wire/reg/integer、packed
+  signed/unsigned、assign、组合/时序 always、if/case、reset、instance 与必要 generate。
+- [x] 真实 pyGHDL/libghdl 6.0.0 分析全部正向 VHDL golden，缺失 runtime 不允许 skip。
+- [x] blocking 组合赋值通过 process-local VHDL variable 保留 read-after-write；时序
+  nonblocking 映射为 clock/reset process 中的 signal assignment。
+- [x] time-zero、X/Z edge、未初始化状态、显式 X 和 unsized sizing 边界均有明确 warning；
+  tri-state、mixed signed sizing、隐式截断、跨文件/include/package、歧义 reset/event、
+  多驱动及不安全 generate 均有负面测试和稳定诊断码。
+- [x] 本机已分别用 pyGHDL 分析 7 组生成 VHDL DUT+TB，并用 pyslang 编译 7 组原始
+  Verilog DUT+TB；这不是双 simulator trace 等价通过声明。
+- [ ] **阻塞：** Ubuntu 24.04 真实 CI 中 Verilog→VHDL 差分必须为
+  `passed=7, failed=0, skipped=0`。
+
+## 回归与质量门禁
+
+- [ ] **阻塞：** 完整 pytest 在具备外部工具的 CI 中零失败、零未说明 skip。
+- [x] 真实 GHDL integration **146/146 passed, 0 skipped**。
+- [x] 真实 Slang integration **96 passed, 0 skipped**。
+- [ ] **阻塞：** VHDL semantic equivalence 为 `2 passed, 0 skipped`。
+- [ ] **阻塞：** SystemVerilog compile/equivalence 为 `8 passed, 0 skipped`。
+- [x] Ruff、compileall、pip check 与 `git diff --check` 全部通过。
+- [x] 本机缺少 standalone `ghdl`、`iverilog`、`vvp` 时，普通入口明确列出 skip，
+  三个 `--require-*equivalence` 门禁必须非零失败；不得把这些 skip 计为 pass。
+
+## wheel、SBOM 与分发材料
+
+- [x] 构建 `hdl_x-0.3.0rc1-py3-none-any.whl`；metadata 与 `pyproject.toml`
+  版本、核心 `pyGHDL==6.0.0`、`systemverilog`/`verilog` 的 `pyslang==11.0.0` 一致，
+  wheel SHA-256 为 `eab235700139c0932008fa184f98e26bb2d73564749fbecd0f5393d90defebe5`。
+- [x] wheel 共 78 entries，包含 6 个 Jinja2 模板、CLI/GUI entry point、`LICENSE` 和
+  `THIRD_PARTY_NOTICES`，且不包含 pyGHDL/libghdl/pyslang payload。
+- [x] 在 `system_site_packages=False` 的全新 venv 中，仅从完整 wheelhouse
+  以 `--no-index` 安装 `hdl-x[systemverilog,verilog]`；CLI、doctor、pip check、真实
+  VHDL→Verilog、SystemVerilog→Verilog、Verilog→VHDL 转换和三份 golden 字节比较通过。
+- [x] 已输出 HDL-X、pyGHDL、pyslang wheels 与三份生成文件的 SHA-256，且三组 generated/golden 哈希分别一致。
+- [x] 从最终 wheelhouse 重建 CycloneDX 1.6 `SBOM.cdx.json`，项目版本为
+  `0.3.0rc1`，active extras 为 `systemverilog,verilog`，并显式依赖 pyslang 11.0.0；
+  SBOM SHA-256 为 `4f97a6b22ea7dbe062b8237bb5a7fe2785317457956cdfc664b94ba08588d82c`。
+- [x] `THIRD_PARTY_NOTICES` 记录源码、纯 Python wheel 与暂缓 PyInstaller EXE 的不同
+  分发边界；v0.3 候选不构建、不发布 EXE。
+- [x] README、`V0_3_VERILOG_TO_VHDL_MVP.md`、本清单、开发日志、wheel metadata、
+  SBOM 和最终校验值保持一致。
+
+## CI 与发布动作
+
+- [x] `.github/workflows/release-gates.yml` 使用 Ubuntu 24.04、固定完整 action commit、
+  GHDL 6.0.0、审核过的 pyGHDL/pyslang wheel URL/SHA-256 和 Icarus/VVP。
+- [x] workflow 分离并强制 VHDL semantic、SystemVerilog、Verilog→VHDL、完整质量和
+  isolated wheelhouse smoke 门禁，不允许 skipped 冒充 passed。
+- [ ] **阻塞：** 普通 commit/push 后读取真实远端 run，全部 job 必须 success，且日志中的
+  精确 passed/failed/skipped 计数与本清单一致。
+- [ ] 只有上述门禁全部满足并获得项目所有者的单独发布授权后，才允许创建
+  `v0.3.0-rc1` tag 或 GitHub Release；不得 force-push。
+
+## 最终验证命令
 
 ```powershell
-python -m pytest -q -ra -p no:cacheprovider --require-ghdl-integration
-python -m pytest tests/equivalence -q -ra -p no:cacheprovider --require-semantic-equivalence
+python -m pytest -q -ra -p no:cacheprovider --require-ghdl-integration --require-slang-integration
+python -m pytest tests/equivalence -q -ra --require-semantic-equivalence --require-systemverilog-equivalence --require-verilog-to-vhdl-equivalence
 python -m ruff check .
-python -m compileall -q src tests packaging/windows
+python -m compileall -q src tests scripts packaging/windows
 python -m pip check
-python -m pip wheel --no-cache-dir --no-deps --no-build-isolation . --wheel-dir build/wheel-release
 python scripts/release_wheel_smoke.py --workspace <new-empty-directory>
 ```
-
-wheel smoke 脚本会拒绝复用既有目录，下载并校验审核过的官方 pyGHDL asset，构建完整
-运行时 wheelhouse，再以 `system_site_packages=False` 的新 venv 和 `--no-index` 安装。
-测试 fixture/golden 是源码测试资产，不属于运行时 wheel；wheel 内必须保留
-`hdl_x/templates/**/*.j2`。
-
-## 外部工具记录
-
-每次候选构建都记录 `ghdl --version`、`iverilog -V`、`vvp -V`、`yosys -V` 与
-`sby --version`（若存在）。Yosys/SymbiYosys 缺失不能冒充形式验证通过；当前 v0.1
-行为等价 gate 的必需工具是 GHDL CLI、Icarus compiler 和 VVP runtime。
-
-## 发布动作
-
-- [x] 更新最终测试计数、skip 原因、wheel SHA-256 和构建平台。
-- [x] 确认 `git diff -- tests/golden` 为空。
-- [x] 从待发布 wheel 重跑最小真实转换并逐字比较 golden。
-- [ ] 检查 wheel/sdist 文件清单与 metadata；测试 assets 仅需存在于源码归档。
-- [ ] 完成上述门禁后，才允许创建 tag、GitHub Release 或上传公开制品。

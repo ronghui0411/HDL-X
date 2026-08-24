@@ -12,12 +12,14 @@ _GHDL_MARKER = "ghdl_integration"
 _SLANG_MARKER = "slang_integration"
 _EQUIVALENCE_MARKER = "semantic_equivalence"
 _SV_EQUIVALENCE_MARKER = "systemverilog_equivalence"
+_V2V_EQUIVALENCE_MARKER = "verilog_to_vhdl_equivalence"
 _SELECTED_KEY = pytest.StashKey[frozenset[str]]()
 _STATUS_KEY = pytest.StashKey[PyGhdlRuntimeStatus]()
 _SLANG_SELECTED_KEY = pytest.StashKey[frozenset[str]]()
 _SLANG_STATUS_KEY = pytest.StashKey[PySlangRuntimeStatus]()
 _EQUIVALENCE_SELECTED_KEY = pytest.StashKey[frozenset[str]]()
 _SV_EQUIVALENCE_SELECTED_KEY = pytest.StashKey[frozenset[str]]()
+_V2V_EQUIVALENCE_SELECTED_KEY = pytest.StashKey[frozenset[str]]()
 _TOOLCHAIN_KEY = pytest.StashKey[VerificationToolchain]()
 
 
@@ -46,6 +48,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="要求选择并实际具备 Icarus SystemVerilog/Verilog 差分工具链。",
     )
+    parser.addoption(
+        "--require-verilog-to-vhdl-equivalence",
+        action="store_true",
+        default=False,
+        help="要求选择并实际具备 Icarus/GHDL Verilog 到 VHDL 差分工具链。",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -64,6 +72,10 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "systemverilog_equivalence: 使用 Icarus 比较 SystemVerilog/Verilog trace",
+    )
+    config.addinivalue_line(
+        "markers",
+        "verilog_to_vhdl_equivalence: 使用 Icarus/GHDL 比较 Verilog 与生成 VHDL trace",
     )
 
 
@@ -85,6 +97,12 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         item.nodeid for item in items if item.get_closest_marker(_SV_EQUIVALENCE_MARKER) is not None
     )
     config.stash[_SV_EQUIVALENCE_SELECTED_KEY] = systemverilog_equivalence_selected
+    verilog_to_vhdl_equivalence_selected = frozenset(
+        item.nodeid
+        for item in items
+        if item.get_closest_marker(_V2V_EQUIVALENCE_MARKER) is not None
+    )
+    config.stash[_V2V_EQUIVALENCE_SELECTED_KEY] = verilog_to_vhdl_equivalence_selected
     toolchain = detect_verification_toolchain()
     config.stash[_TOOLCHAIN_KEY] = toolchain
 
@@ -111,6 +129,17 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             raise pytest.UsageError(
                 "SystemVerilog equivalence required but external tools are missing: "
                 + ", ".join(toolchain.missing_systemverilog_differential)
+            )
+
+    if config.getoption("--require-verilog-to-vhdl-equivalence"):
+        if not verilog_to_vhdl_equivalence_selected:
+            raise pytest.UsageError(
+                "--require-verilog-to-vhdl-equivalence selected 0 equivalence tests"
+            )
+        if not toolchain.differential_available:
+            raise pytest.UsageError(
+                "Verilog to VHDL equivalence required but external tools are missing: "
+                + ", ".join(toolchain.missing_differential)
             )
 
     if selected:
@@ -182,6 +211,24 @@ def pytest_terminal_summary(
         terminalreporter.write_line(
             "Semantic equivalence: "
             f"EXECUTED {len(reports)}/{len(equivalence_selected)} "
+            f"(passed={passed}, failed={failed}, skipped={skipped}, missing={missing})"
+        )
+
+    verilog_to_vhdl_selected = config.stash.get(
+        _V2V_EQUIVALENCE_SELECTED_KEY, frozenset()
+    )
+    if not verilog_to_vhdl_selected:
+        terminalreporter.write_line("Verilog to VHDL equivalence: NOT SELECTED (0 tests)")
+    else:
+        reports = _call_reports(terminalreporter, verilog_to_vhdl_selected)
+        passed = sum(report.passed for report in reports)
+        failed = sum(report.failed for report in reports)
+        skipped = sum(report.skipped for report in reports)
+        toolchain = config.stash[_TOOLCHAIN_KEY]
+        missing = ", ".join(toolchain.missing_differential) or "none"
+        terminalreporter.write_line(
+            "Verilog to VHDL equivalence: "
+            f"EXECUTED {len(reports)}/{len(verilog_to_vhdl_selected)} "
             f"(passed={passed}, failed={failed}, skipped={skipped}, missing={missing})"
         )
 

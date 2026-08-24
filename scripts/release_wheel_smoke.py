@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 _PYGHDL_VERSION = "6.0.0"
 _PYSLANG_VERSION = "11.0.0"
-_PROJECT_VERSION = "0.2.0"
+_PROJECT_VERSION = "0.3.0rc1"
 _PYGHDL_ASSETS = {
     ("linux", "x86_64", (3, 13)): (
         "pyghdl-6.0.0-cp313-cp313-linux_x86_64.whl",
@@ -211,7 +211,7 @@ def run_smoke(workspace: Path) -> None:
             "--no-index",
             "--find-links",
             str(wheelhouse),
-            f"hdl-x[systemverilog]=={_PROJECT_VERSION}",
+            f"hdl-x[systemverilog,verilog]=={_PROJECT_VERSION}",
         ],
         cwd=smoke_work,
         env=environment,
@@ -280,6 +280,31 @@ def run_smoke(workspace: Path) -> None:
             "Installed-wheel SystemVerilog output is not byte-identical to committed golden"
         )
 
+    verilog_fixture = repository / "tests" / "fixtures" / "verilog" / "v3_simple_assign.v"
+    vhdl_golden = repository / "tests" / "golden_vhdl" / "v3_simple_assign.vhd"
+    vhdl_generated = smoke_work / "v3_simple_assign.vhd"
+    _run(
+        [
+            str(venv_cli),
+            "convert",
+            str(verilog_fixture),
+            "--from",
+            "verilog",
+            "--to",
+            "vhdl",
+            "-o",
+            str(vhdl_generated),
+            "--strict",
+            "--validate",
+        ],
+        cwd=smoke_work,
+        env=environment,
+    )
+    if vhdl_generated.read_bytes() != vhdl_golden.read_bytes():
+        raise RuntimeError(
+            "Installed-wheel Verilog to VHDL output is not byte-identical to committed golden"
+        )
+
     print(manifest.read_text(encoding="utf-8"), end="")
     print(f"HDL_X_WHEEL_SHA256={_sha256(project_wheel)}")
     print(f"PYGHDL_WHEEL_SHA256={_sha256(pyghdl_wheel)}")
@@ -288,6 +313,8 @@ def run_smoke(workspace: Path) -> None:
     print(f"GOLDEN_SHA256={_sha256(golden)}")
     print(f"SV_GENERATED_SHA256={_sha256(systemverilog_generated)}")
     print(f"SV_GOLDEN_SHA256={_sha256(systemverilog_golden)}")
+    print(f"V2V_GENERATED_SHA256={_sha256(vhdl_generated)}")
+    print(f"V2V_GOLDEN_SHA256={_sha256(vhdl_golden)}")
     print("ISOLATED_WHEELHOUSE_SMOKE=PASSED")
 
 

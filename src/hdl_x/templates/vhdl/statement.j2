@@ -1,0 +1,10 @@
+{% if kind == "assignment" %}{{ indent }}{{ target }} {{ operator }} {{ value }};{% elif kind == "if" %}{{ indent }}if {{ condition }} then
+{{ then_text }}{% if else_text %}
+{{ indent }}else
+{{ else_text }}{% endif %}
+{{ indent }}end if;{% elif kind == "case" %}{{ indent }}case {{ expression }} is
+{{ alternatives_text }}
+{{ indent }}    when others =>
+{{ default_text }}
+{{ indent }}end case;{% elif kind == "case_alternative" %}{{ indent }}when {{ selectors }} =>
+{{ body_text }}{% elif kind == "null" %}{{ indent }}null;{% endif %}

@@ -182,9 +182,10 @@ def generate_sbom(
     project = by_name.get("hdl-x")
     if project is None:
         raise RuntimeError("wheelhouse 中没有 HDL-X wheel")
-    if "systemverilog" in extras and "pyslang" not in by_name:
+    slang_extras = {"systemverilog", "verilog"}.intersection(extras)
+    if slang_extras and "pyslang" not in by_name:
         raise RuntimeError(
-            "systemverilog extra 的 SBOM wheelhouse 缺少精确 pyslang wheel"
+            "Slang frontend extra 的 SBOM wheelhouse 缺少精确 pyslang wheel"
         )
 
     available = {name: component["bom-ref"] for name, component in by_name.items()}

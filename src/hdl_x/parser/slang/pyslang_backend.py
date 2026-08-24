@@ -13,6 +13,8 @@ from .base import SlangFrontendBackend
 from .raw import RawSourceSpan, RawSystemVerilogDesign, RawSystemVerilogModule
 from .runtime import require_pyslang_runtime
 
+_SOURCE_SPAN_KEY = "_hdl_x_source_span"
+
 _UNSUPPORTED_SYNTAX: dict[str, tuple[str, str]] = {
     "InterfaceDeclaration": ("HDLX-SV-INTERFACE", "SystemVerilog interface 不在 v0.2 MVP 内"),
     "ModportDeclaration": ("HDLX-SV-MODPORT", "SystemVerilog modport 不在 v0.2 MVP 内"),
@@ -108,6 +110,12 @@ class PySlangBackend(SlangFrontendBackend):
                     code="HDLX-SV-SERIALIZATION",
                     source_span=self._source_span(node.sourceRange, source_manager, path),
                 )
+            self._decorate_source_spans(
+                payload,
+                node,
+                source_manager=source_manager,
+                source_path=path,
+            )
             modules.append(
                 RawSystemVerilogModule(
                     name=node.header.name.valueText,
@@ -123,6 +131,67 @@ class PySlangBackend(SlangFrontendBackend):
             modules=tuple(modules),
             top_names=top_names,
         )
+
+    @classmethod
+    def _decorate_source_spans(
+        cls,
+        payload: dict[str, Any],
+        syntax_root: Any,
+        *,
+        source_manager: Any,
+        source_path: Path,
+    ) -> None:
+        """把 Slang node range 复制为 Raw JSON 中的纯 Python 元数据。"""
+
+        syntax_nodes: list[Any] = []
+
+        def collect_syntax(node: Any) -> None:
+            if hasattr(node, "sourceRange") and isinstance(
+                getattr(getattr(node, "kind", None), "name", None), str
+            ):
+                syntax_nodes.append(node)
+
+        syntax_root.visit(collect_syntax)
+        payload_nodes: list[dict[str, Any]] = []
+
+        def collect_payload(value: object) -> None:
+            if isinstance(value, dict):
+                if isinstance(value.get("kind"), str) and "text" not in value:
+                    payload_nodes.append(value)
+                for child in value.values():
+                    collect_payload(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect_payload(child)
+
+        collect_payload(payload)
+        syntax_kinds = [node.kind.name for node in syntax_nodes]
+        payload_kinds = [node["kind"] for node in payload_nodes]
+        if syntax_kinds != payload_kinds:
+            raise FrontendError(
+                "Slang syntax traversal 与 JSON serialization 顺序不一致，"
+                "无法安全保留逐节点 source span",
+                code="HDLX-SV-SOURCE-MAP",
+                source_span=cls._source_span(
+                    syntax_root.sourceRange,
+                    source_manager,
+                    source_path,
+                ),
+            )
+
+        for syntax_node, payload_node in zip(syntax_nodes, payload_nodes, strict=True):
+            raw = cls._raw_span(
+                syntax_node.sourceRange,
+                source_manager,
+                source_path,
+            )
+            payload_node[_SOURCE_SPAN_KEY] = {
+                "file": str(raw.file),
+                "start_line": raw.start_line,
+                "start_column": raw.start_column,
+                "end_line": raw.end_line,
+                "end_column": raw.end_column,
+            }
 
     def _raise_diagnostic(
         self,

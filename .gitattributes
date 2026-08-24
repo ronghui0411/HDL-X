@@ -1,0 +1,3 @@
+# 生成的 VHDL golden 必须保持跨平台 LF 字节一致。
+.gitattributes text eol=lf
+tests/golden_vhdl/*.vhd text eol=lf

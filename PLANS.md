@@ -2019,3 +2019,30 @@ The goal is a trustworthy, extensible translation architecture with a working VH
   Canonical IR 更丰富；超出可证明子集必须拒绝。
 - 本机无 Icarus/VVP 时无法提供真实差分通过证据；只能验证 skip/强制失败门禁正确。
 - 删除 deprecated Canonical 字段不是本计划内容，必须另行版本化迁移。
+
+# 16. v0.3 Verilog-2001 → VHDL-2008 MVP
+
+本节由项目所有者在 `v0.2.0` 正式发布后授权，覆盖前述“不自动实现
+Verilog → VHDL”的历史范围限制。详细契约见
+`V0_3_VERILOG_TO_VHDL_MVP.md`。
+
+## 16.1 不变量
+
+- 以 `v0.2.0` / `f283854d2d059e1bc54174d7f9509430c984bbe7` 为不可变稳定基线；
+- 不修改已发布 tag、Release、wheel、SBOM 或既有 golden；
+- 不改变 v0.2.0 Canonical IR/JSON、公开 API 或既有两条转换输出；
+- Slang 对象只存在于 `parser/slang`，VHDL target 决策只存在新的
+  semantic boundary / `VhdlLowering` / `VhdlRenderIR`；
+- unsafe 构造在 strict 和 best-effort 中都以 `HDLX-V2V-*` 失败。
+
+## 16.2 实施切片
+
+1. **基线与设计 — completed**
+   - 已核对稳定提交、tag、Release、CI、工具链和本地回归；
+   - 已冻结兼容契约、支持/拒绝矩阵和停止条件。
+2. **真实 Verilog frontend 与最小 assign 竖向切片 — completed**
+3. **blocking 组合过程、if/case 与 target-local variable — completed**
+4. **posedge/negedge、同步/异步 reset 与 nonblocking 时序过程 — completed**
+5. **signed/width、parameter、instance 和必要 generate — completed**
+6. **注释/span、负面语义证据、GHDL/Icarus 差分和 CI 门禁 — completed**
+7. **完整回归、wheel/SBOM/文档同步与 rc1 readiness — in progress**

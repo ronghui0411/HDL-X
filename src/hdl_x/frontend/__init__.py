@@ -8,6 +8,7 @@ from .comments import (
     scan_vhdl_comments,
 )
 from .systemverilog import SystemVerilogFrontend
+from .verilog import VerilogFrontend
 from .vhdl import VhdlFrontend
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "SystemVerilogFrontend",
     "SystemVerilogCommentScanner",
     "VhdlCommentScanner",
+    "VerilogFrontend",
     "VhdlFrontend",
     "scan_systemverilog_comments",
     "scan_vhdl_comments",

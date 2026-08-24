@@ -1,4 +1,4 @@
-"""HDL-X VHDL 到 Verilog-2001 转换编排。"""
+"""HDL-X 已支持语言路径的 frontend、lowering 与 renderer 编排。"""
 
 from __future__ import annotations
 
@@ -9,16 +9,26 @@ from tempfile import TemporaryDirectory
 from hdl_x.diagnostics import (
     Diagnostic,
     DiagnosticSeverity,
+    HDLXError,
     UnsupportedConstructError,
     ValidationError,
 )
-from hdl_x.frontend import SystemVerilogFrontend, VhdlFrontend
-from hdl_x.generator import VerilogGenerator, VerilogLowering, VerilogRenderer
+from hdl_x.frontend import SystemVerilogFrontend, VerilogFrontend, VhdlFrontend
+from hdl_x.generator import (
+    VerilogGenerator,
+    VerilogLowering,
+    VerilogRenderer,
+    VhdlGenerator,
+    VhdlLowering,
+    VhdlRenderer,
+)
 from hdl_x.ir import Comment, Design
+from hdl_x.parser.ghdl import PyGhdlBackend
 from hdl_x.transformer import (
     NameStyle,
     SemanticBoundaryAnalysis,
     SystemVerilogSemanticBoundaryAnalysis,
+    VerilogToVhdlSemanticBoundaryAnalysis,
 )
 from hdl_x.validator import SlangValidator, ValidationStatus, YosysValidator
 
@@ -53,38 +63,55 @@ def convert_file(
     source_language: str = "vhdl",
     target_language: str = "verilog",
     options: ConversionOptions | None = None,
-    frontend: VhdlFrontend | SystemVerilogFrontend | None = None,
-    generator: VerilogGenerator | None = None,
+    frontend: VhdlFrontend | SystemVerilogFrontend | VerilogFrontend | None = None,
+    generator: VerilogGenerator | VhdlGenerator | None = None,
 ) -> ConversionResult:
-    """执行已声明支持的真实 frontend → Verilog-2001 pipeline。"""
+    """执行已声明支持的真实 frontend → target HDL pipeline。"""
 
     normalized_source = source_language.casefold()
     normalized_target = target_language.casefold()
-    supported_sources = {"vhdl", "systemverilog", "sv"}
-    if normalized_source not in supported_sources or normalized_target != "verilog":
+    to_verilog = (
+        normalized_source in {"vhdl", "systemverilog", "sv"}
+        and normalized_target == "verilog"
+    )
+    to_vhdl = (
+        normalized_source in {"verilog", "v"}
+        and normalized_target == "vhdl"
+    )
+    if not (to_verilog or to_vhdl):
         raise UnsupportedConstructError(
             f"当前 MVP 不支持 {source_language} → {target_language}；"
-            "支持 vhdl/systemverilog → verilog。",
+            "支持 vhdl/systemverilog → verilog 及 verilog → vhdl。",
             code="HDLX-CONVERSION-PATH",
         )
 
     active_options = options or ConversionOptions()
-    active_frontend = frontend or (
-        VhdlFrontend() if normalized_source == "vhdl" else SystemVerilogFrontend()
-    )
+    if frontend is not None:
+        active_frontend = frontend
+    elif normalized_source == "vhdl":
+        active_frontend = VhdlFrontend()
+    elif normalized_source in {"systemverilog", "sv"}:
+        active_frontend = SystemVerilogFrontend()
+    else:
+        active_frontend = VerilogFrontend()
     design = active_frontend.parse_design(Path(source_path))
-    boundary_analysis = (
-        SemanticBoundaryAnalysis()
-        if normalized_source == "vhdl"
-        else SystemVerilogSemanticBoundaryAnalysis()
-    )
+    if normalized_source == "vhdl":
+        boundary_analysis = SemanticBoundaryAnalysis()
+    elif normalized_source in {"systemverilog", "sv"}:
+        boundary_analysis = SystemVerilogSemanticBoundaryAnalysis()
+    else:
+        boundary_analysis = VerilogToVhdlSemanticBoundaryAnalysis()
     diagnostics: list[Diagnostic] = list(boundary_analysis.analyze(design))
     if generator is None:
-        render_ir = VerilogLowering(
-            name_style=active_options.name_style,
-            source_case_sensitive=normalized_source != "vhdl",
-        ).lower(design)
-        text = VerilogRenderer().render(render_ir)
+        if to_verilog:
+            render_ir = VerilogLowering(
+                name_style=active_options.name_style,
+                source_case_sensitive=normalized_source != "vhdl",
+            ).lower(design)
+            text = VerilogRenderer().render(render_ir)
+        else:
+            render_ir = VhdlLowering(name_style=active_options.name_style).lower(design)
+            text = VhdlRenderer().render(render_ir)
         lowered_design = render_ir.design
     else:
         # 自定义 generator 仍通过其公共契约自行执行需要的 lowering。
@@ -115,7 +142,11 @@ def convert_file(
             )
         )
     if active_options.validate:
-        diagnostics.extend(_validate_generated_verilog(text))
+        diagnostics.extend(
+            _validate_generated_verilog(text)
+            if to_verilog
+            else _validate_generated_vhdl(text)
+        )
     return ConversionResult(
         text=text,
         design=lowered_design,
@@ -140,6 +171,23 @@ def _describe_omitted_comments(comments: tuple[Comment, ...]) -> tuple[str, str]
     if len(comments) > 3:
         entries.append(f"另有 {len(comments) - 3} 条")
     return "; ".join(entries), "\n".join(snippets)
+
+
+def _validate_generated_vhdl(text: str) -> list[Diagnostic]:
+    """使用项目固定的 pyGHDL/libghdl 6.0.0 验证 VHDL-2008 输出。"""
+
+    with TemporaryDirectory(prefix="hdl-x-validation-") as directory:
+        output_path = Path(directory) / "generated.vhd"
+        output_path.write_text(text, encoding="utf-8", newline="\n")
+        try:
+            PyGhdlBackend().validate(output_path)
+        except HDLXError as error:
+            raise ValidationError(
+                f"pyGHDL/libghdl 拒绝生成的 VHDL：{error.diagnostic.message}",
+                code="HDLX-VHDL-VALIDATION",
+                source_span=error.diagnostic.source_span,
+            ) from error
+    return []
 
 
 def _validate_generated_verilog(text: str) -> list[Diagnostic]:

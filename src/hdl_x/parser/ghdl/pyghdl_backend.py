@@ -123,6 +123,52 @@ def _load_api() -> SimpleNamespace:
 class PyGhdlBackend(GhdlFrontendBackend):
     """运行真实 GHDL 分析并立即隔离为私有 Raw VHDL 表示。"""
 
+    def validate(self, source_path: Path) -> None:
+        """只运行真实 libghdl 语法/语义 pass，不要求 HDL-X 可反向提取该 VHDL。"""
+
+        path = Path(source_path).resolve()
+        if not path.is_file():
+            raise FrontendError(
+                "VHDL 源文件不存在或不是普通文件。",
+                code="HDLX-GHDL-SOURCE",
+                file=str(path),
+            )
+        try:
+            source_code = path.read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeError) as ex:
+            raise FrontendError(
+                f"无法以 UTF-8 读取 VHDL 源文件：{ex}",
+                code="HDLX-GHDL-READ",
+                file=str(path),
+            ) from ex
+
+        api = _load_api()
+        with _LIBGHDL_LOCK:
+            gather_comments = api.flags.Flag_Gather_Comments.value
+            parse_parenthesis = api.vhdl_parse.Flag_Parse_Parenthesis.value
+            self._active_source_lines = tuple(source_code.splitlines())
+            try:
+                self._validate_low_level_semantics(api, path, source_code)
+            except HDLXError:
+                raise
+            except (api.DOMException, api.LibGHDLException, OSError) as ex:
+                details = self._format_ghdl_error(ex)
+                line, column = self._error_location(details)
+                raise FrontendError(
+                    f"GHDL 无法分析 VHDL 源文件：{details}",
+                    code="HDLX-GHDL-ANALYZE",
+                    file=str(path),
+                    line=line,
+                    column=column,
+                    suggestion="修正 GHDL 报告的语法或语义错误后重试。",
+                ) from ex
+            finally:
+                # validate-only 不进入后续 DOM 提取，必须主动重置 libghdl arena。
+                api.Design()
+                api.flags.Flag_Gather_Comments.value = gather_comments
+                api.vhdl_parse.Flag_Parse_Parenthesis.value = parse_parenthesis
+                self._active_source_lines = ()
+
     def parse(self, source_path: Path) -> RawDesign:
         path = Path(source_path).resolve()
         if not path.is_file():

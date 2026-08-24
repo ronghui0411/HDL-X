@@ -1,0 +1,47 @@
+{% for comment in unit.leading_comments %}{{ comment | vhdl_comment }}
+{% endfor %}library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity {{ unit.entity_name }} is
+{% if unit.generics %}    generic (
+{% for declaration in unit.generics %}{% for comment in declaration.leading_comments %}        {{ comment | vhdl_comment }}
+{% endfor %}        {{ declaration.name }} : {{ declaration.type_text }}{% if declaration.default_text is not none %} := {{ declaration.default_text }}{% endif %}{% if not loop.last %};{% endif %}
+{% for comment in declaration.trailing_comments %}        {{ comment | vhdl_comment }}
+{% endfor %}{% endfor %}    );
+{% endif %}{% if unit.ports %}    port (
+{% for declaration in unit.ports %}{% for comment in declaration.leading_comments %}        {{ comment | vhdl_comment }}
+{% endfor %}        {{ declaration.name }} : {{ declaration.mode }} {{ declaration.type_text }}{% if not loop.last %};{% endif %}
+{% for comment in declaration.trailing_comments %}        {{ comment | vhdl_comment }}
+{% endfor %}{% endfor %}    );
+{% endif %}end entity {{ unit.entity_name }};
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+architecture {{ unit.architecture_name }} of {{ unit.entity_name }} is
+{% for declaration in unit.signals %}{% for comment in declaration.leading_comments %}    {{ comment | vhdl_comment }}
+{% endfor %}    signal {{ declaration.name }} : {{ declaration.type_text }};
+{% for comment in declaration.trailing_comments %}    {{ comment | vhdl_comment }}
+{% endfor %}{% endfor %}begin
+{% for item in unit.items %}{% for comment in item.leading_comments %}    {{ comment | vhdl_comment }}
+{% endfor %}{% if item.kind == "concurrent_assignment" %}    {{ item.target }} <= {{ item.value }};
+{% elif item.kind == "process" %}    {{ item.label }} : process({{ item.sensitivity | join(", ") }})
+{% for declaration in item.declarations %}        variable {{ declaration.name }} : {{ declaration.type_text }};
+{% endfor %}    begin
+{% for statement in item.body %}{{ statement | vhdl_statement(2) }}
+{% endfor %}    end process {{ item.label }};
+{% elif item.kind == "instance" %}    {{ item.label }} : entity work.{{ item.entity_name }}
+{% if item.generic_map %}        generic map (
+{% for association in item.generic_map %}            {% if association.formal is not none %}{{ association.formal }} => {% endif %}{{ association.value }}{% if not loop.last %},{% endif %}
+{% endfor %}        ){% if not item.port_map %};{% endif %}
+{% endif %}{% if item.port_map %}        port map (
+{% for association in item.port_map %}            {% if association.formal is not none %}{{ association.formal }} => {% endif %}{{ association.value }}{% if not loop.last %},{% endif %}
+{% endfor %}        );
+{% endif %}{% if not item.generic_map and not item.port_map %}        ;
+{% endif %}{% elif item.kind in ("for_generate", "if_generate") %}{{ item | vhdl_item(1, false) }}
+{% endif %}{% for comment in item.trailing_comments %}    {{ comment | vhdl_comment }}
+{% endfor %}{% endfor %}end architecture {{ unit.architecture_name }};
+{% for comment in unit.trailing_comments %}{{ comment | vhdl_comment }}
+{% endfor %}

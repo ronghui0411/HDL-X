@@ -2,19 +2,19 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:f0524490-13b0-5b8b-a6a0-f4154ed7a5e8",
+  "serialNumber": "urn:uuid:e60f0160-956e-52fd-83e2-45c110eb97df",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-08-23T13:39:52Z",
+    "timestamp": "2026-08-24T02:54:15Z",
     "component": {
       "type": "application",
-      "bom-ref": "pkg:pypi/hdl-x@0.2.0",
+      "bom-ref": "pkg:pypi/hdl-x@0.3.0rc1",
       "name": "hdl-x",
-      "version": "0.2.0",
+      "version": "0.3.0rc1",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "834c447b3bc95bf256072f03c924a375c89ff3443aaebb80ad0c8a7ac1f1d5dc"
+          "content": "eab235700139c0932008fa184f98e26bb2d73564749fbecd0f5393d90defebe5"
         }
       ],
       "licenses": [
@@ -22,11 +22,11 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:pypi/hdl-x@0.2.0",
+      "purl": "pkg:pypi/hdl-x@0.3.0rc1",
       "properties": [
         {
           "name": "hdl-x:wheel-file",
-          "value": "hdl_x-0.2.0-py3-none-any.whl"
+          "value": "hdl_x-0.3.0rc1-py3-none-any.whl"
         },
         {
           "name": "hdl-x:distribution-boundary",
@@ -34,7 +34,7 @@
         },
         {
           "name": "hdl-x:release",
-          "value": "v0.2.0"
+          "value": "v0.3.0-rc1"
         },
         {
           "name": "hdl-x:contains-pyghdl",
@@ -42,7 +42,7 @@
         },
         {
           "name": "hdl-x:sbom-scope",
-          "value": "Windows CPython 3.13 0.2.0 wheelhouse with systemverilog extra"
+          "value": "CPython 3.13 Windows x86-64 isolated runtime wheelhouse; project wheel excludes pyGHDL/libghdl/pyslang"
         }
       ],
       "externalReferences": [
@@ -67,7 +67,7 @@
       },
       {
         "name": "hdl-x:active-extras",
-        "value": "systemverilog"
+        "value": "systemverilog,verilog"
       }
     ]
   },
@@ -934,7 +934,7 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:pypi/hdl-x@0.2.0",
+      "ref": "pkg:pypi/hdl-x@0.3.0rc1",
       "dependsOn": [
         "pkg:pypi/jinja2@3.1.6",
         "pkg:pypi/pydantic@2.13.4",

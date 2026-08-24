@@ -18,12 +18,15 @@ class SourceLanguage(str, Enum):
     VHDL = "vhdl"
     SYSTEMVERILOG = "systemverilog"
     SV = "sv"
+    VERILOG = "verilog"
+    V = "v"
 
 
 class TargetLanguage(str, Enum):
     """当前声明支持的目标语言。"""
 
     VERILOG = "verilog"
+    VHDL = "vhdl"
 
 
 app = typer.Typer(
@@ -65,9 +68,9 @@ def convert(
         typer.Option("--to", help="输出 HDL 语言。"),
     ] = TargetLanguage.VERILOG,
     output: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="输出 Verilog 文件。"),
-    ] = Path("output.v"),
+        Path | None,
+        typer.Option("--output", "-o", help="输出 HDL 文件。"),
+    ] = None,
     strict: Annotated[
         bool,
         typer.Option("--strict", help="遇到任何不支持构造时失败。"),
@@ -89,7 +92,7 @@ def convert(
         typer.Option("--verbose", "-v", help="显示转换阶段信息。"),
     ] = False,
 ) -> None:
-    """将受支持的 VHDL/SystemVerilog 子集转换为 Verilog-2001。"""
+    """执行当前声明支持的 HDL 源到目标 RTL 转换。"""
 
     if strict and best_effort:
         raise typer.BadParameter("--strict 与 --best-effort 不能同时启用")
@@ -121,6 +124,8 @@ def convert(
             raise typer.Exit(code=1) from error
         raise
 
+    if output is None:
+        output = Path("output.vhd" if target_language is TargetLanguage.VHDL else "output.v")
     output = output.expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(result.text, encoding="utf-8", newline="\n")

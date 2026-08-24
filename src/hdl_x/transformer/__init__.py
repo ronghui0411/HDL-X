@@ -4,6 +4,7 @@ from .identifier_resolver import DesignIdentifierResolver, IdentifierResolver, N
 from .semantic_boundaries import SemanticBoundaryAnalysis
 from .semantic_lowering import SemanticLowering
 from .systemverilog_boundaries import SystemVerilogSemanticBoundaryAnalysis
+from .verilog_to_vhdl_boundaries import VerilogToVhdlSemanticBoundaryAnalysis
 
 __all__ = [
     "DesignIdentifierResolver",
@@ -12,4 +13,5 @@ __all__ = [
     "SemanticBoundaryAnalysis",
     "SemanticLowering",
     "SystemVerilogSemanticBoundaryAnalysis",
+    "VerilogToVhdlSemanticBoundaryAnalysis",
 ]

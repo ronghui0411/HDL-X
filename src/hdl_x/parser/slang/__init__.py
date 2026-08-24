@@ -2,6 +2,7 @@
 
 from .base import SlangFrontendBackend
 from .pyslang_backend import PySlangBackend
+from .pyslang_verilog_backend import PySlangVerilogBackend
 from .raw import RawSourceSpan, RawSystemVerilogDesign, RawSystemVerilogModule
 from .runtime import (
     SUPPORTED_PYSLANG_VERSION,
@@ -13,6 +14,7 @@ from .runtime import (
 __all__ = [
     "SUPPORTED_PYSLANG_VERSION",
     "PySlangBackend",
+    "PySlangVerilogBackend",
     "PySlangRuntimeStatus",
     "RawSourceSpan",
     "RawSystemVerilogDesign",
